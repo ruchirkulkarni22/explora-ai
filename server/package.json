@@ -1,0 +1,27 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "compromise": "^14.14.4",
+    "cors": "^2.8.5",
+    "docx": "^9.5.1",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "jszip": "^3.10.1",
+    "mammoth": "^1.9.1",
+    "multer": "^2.0.2",
+    "node-fetch": "^2.7.0",
+    "spacy-js": "^0.0.5",
+    "uuid": "^11.1.0"
+  }
+}

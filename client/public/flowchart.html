@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Flow Diagram</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #flowchart-container {
+            width: 100%;
+            max-width: 1200px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .error {
+            color: #b91c1c;
+            font-size: 1.1em;
+            text-align: center;
+            padding: 20px;
+            border: 2px dashed #f87171;
+            background-color: #fee2e2;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="flowchart-container">Rendering diagram...</div>
+
+    <!-- Mermaid.js library for rendering diagrams -->
+    <script type="module">
+        // Import the Mermaid library
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        
+        // Initialize Mermaid to not start automatically, as we will call it manually
+        mermaid.initialize({ startOnLoad: false });
+
+        // Async function to render the diagram from the URL parameter
+        async function renderFlowchart() {
+            const container = document.getElementById('flowchart-container');
+            const params = new URLSearchParams(window.location.search);
+            const encodedCode = params.get('code');
+
+            if (encodedCode) {
+                try {
+                    // Decode the Mermaid code from the URL parameter
+                    const decodedCode = decodeURIComponent(encodedCode);
+                    
+                    // Use mermaid.render to generate an SVG from the code string.
+                    // This is the correct and robust way to handle dynamic content.
+                    const { svg } = await mermaid.render('mermaid-graph', decodedCode);
+                    container.innerHTML = svg;
+
+                } catch (e) {
+                    container.innerHTML = `<div class="error"><strong>Error rendering diagram:</strong><br>${e.message}<br><br><strong>Received Code:</strong><pre>${decodeURIComponent(encodedCode)}</pre></div>`;
+                    console.error("Mermaid Render Error:", e);
+                }
+            } else {
+                container.innerHTML = '<div class="error">No diagram code was provided in the URL.</div>';
+            }
+        }
+
+        // Run the render function when the page loads
+        renderFlowchart();
+    </script>
+</body>
+</html>
