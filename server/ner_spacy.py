@@ -26,7 +26,7 @@ def extract_entities(text):
     # ==============================================================================
     deny_list = {
         "api", "apis", "bpa", "capex", "cio", "coo", "etl", "je", "jee",
-        "labor", "ocr", "pdf", "po", "sow", "sox", "tnm", "uat", "vpa"
+        "labor", "ocr", "pdf", "po", "sow", "sox", "tnm", "uat", "vpa", "Oracle"
     }
 
     try:
