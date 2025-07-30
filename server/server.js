@@ -226,6 +226,9 @@ const FLOWCHART_PROMPT = `You are a specialist AI that ONLY generates Mermaid.js
 6.  Label decision paths like this: \`B-- Yes -->C\` or \`B-- No -->D\`.
 7.  DO NOT add ANY comments, explanations, or text outside the \`\`\`mermaid\`\`\` block.
 8.  DO NOT use subgraphs or any advanced features. Stick to basic nodes and connections.
+9. You cannot use brackets "(" or ")" anywhere in the flowchart. 
+For example: B -- Approved --> C[Process Payment (Processing)]; 
+This is not allowed, because we have brackets in the node text.
 
 **EXAMPLE OF A PERFECT RESPONSE:**
 \`\`\`mermaid
@@ -538,7 +541,7 @@ const generateBRDWithGeminiAdapter = async (anonymizedContent) => {
 HERE IS THE BRD TEMPLATE TO USE FOR YOUR OUTPUT. GENERATE HIGH-QUALITY OUTPUT AFTER CONSIDERING THE BELOW TEMPLATE:
 ${BRD_MARKDOWN_TEMPLATE}
 ---
-ANALYZE THE FOLLOWING TRANSCRIPT AND GENERATE A HIGH-QUALITY BRD:
+ANALYZE THE FOLLOWING TRANSCRIPT AND GENERATE A HIGH-QUALITY BRD WHILE STRICTLY FOLLOWING ALL THE ABOVE INSTRUCTIONS:
 ${anonymizedContent}`;
 
     const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };

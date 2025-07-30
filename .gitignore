@@ -1,0 +1,6 @@
+#ignore env files
+server/.env
+# Ignore server dependencies
+server/node_modules/
+# Ignore server build artifacts
+server/latest_server.js
