@@ -216,28 +216,32 @@ const BRD_MARKDOWN_TEMPLATE = `
 `;
 
 // **FIXED**: The prompt is now much stricter to prevent invalid syntax generation.
-const FLOWCHART_PROMPT = `You are an expert process flow diagram generator. Your task is to convert a textual description of a business process into a Mermaid.js flowchart syntax.
-**CRITICAL INSTRUCTIONS:**
-1.  **ONLY USE VALID MERMAID SYNTAX.** Your entire output must be a single Mermaid code block.
-2.  **START WITH \`graph TD;\`** to define a top-down flowchart.
-3.  **NODE DEFINITION:** Define each step as a node with a simple ID and text in brackets. Example: \`A[Step 1 Text]\` or \`B{Decision Point?}\`.
-4.  **NODE CONNECTIONS:** Connect nodes ONLY with \`-->\`. Example: \`A --> B\`.
-5.  **DECISION LABELS:** For decisions, label the paths using \`-- Yes -->\` or \`-- No -->\`. Example: \`B -- Yes --> C\`.
-6.  **DO NOT** use any characters like ':', '=', or any other symbols for drawing lines or separators.
-7.  **DO NOT** add any comments or explanations outside the \`\`\`mermaid ... \`\`\` block.
-8.  Convert any numbered lists in the input text into a sequence of connected nodes.
+const FLOWCHART_PROMPT = `You are a specialist AI that ONLY generates Mermaid.js flowchart code.
+**ABSOLUTE RULES:**
+1.  Your ENTIRE response MUST be a single Mermaid code block starting with \`\`\`mermaid and ending with \`\`\`.
+2.  The first line inside the code block MUST be \`graph TD;\`.
+3.  Use simple IDs for nodes (e.g., A, B, C1, C2).
+4.  Define node text within brackets: \`A[Text for Step 1]\`. Use curly braces for decisions: \`B{Is condition met?}\`.
+5.  Connect nodes ONLY with \`-->\`.
+6.  Label decision paths like this: \`B-- Yes -->C\` or \`B-- No -->D\`.
+7.  DO NOT add ANY comments, explanations, or text outside the \`\`\`mermaid\`\`\` block.
+8.  DO NOT use subgraphs or any advanced features. Stick to basic nodes and connections.
+9. You cannot use brackets "(" or ")" anywhere in the flowchart. 
+For example: B -- Approved --> C[Process Payment (Processing)]; 
+This is not allowed, because we have brackets in the node text.
 
-**EXAMPLE OF PERFECT OUTPUT:**
+**EXAMPLE OF A PERFECT RESPONSE:**
 \`\`\`mermaid
-graph TD
-    A[Vendor emails invoice] --> B{AI Agent classifies email};
-    B --> C{Amount <= $50K?};
-    C -- Yes --> D[Create BPA Release];
-    C -- No --> E[Route for Manual Approval];
+graph TD;
+    A[Start] --> B{Check Status};
+    B -- Approved --> C[Process Payment];
+    B -- Rejected --> D[Send Notification];
+    C --> E[End];
+    D --> E;
 \`\`\`
 
 **YOUR TASK:**
-Now, convert the following process description into a valid Mermaid.js flowchart, strictly following all the rules above.
+Convert the following process description into Mermaid code, following all rules strictly and precisely.
 `;
 
 // Prompt to intelligently extract a section from a document
@@ -411,6 +415,59 @@ const parseInlineFormatting = (line) => {
     return runs;
 };
 
+// **NEW**: Function to create a self-contained HTML viewer for a flowchart.
+const createFlowchartHtml = (mermaidCode) => {
+    // Escape backticks in the mermaid code to prevent breaking the template literal
+    const escapedCode = mermaidCode.replace(/`/g, '\\`');
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Flow Diagram</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: #f9fafb; }
+        #flowchart-container { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: center; }
+        .error { color: #b91c1c; border: 1px dashed #f87171; background-color: #fee2e2; padding: 15px; border-radius: 8px; }
+        .controls { margin-bottom: 20px; }
+        button { background-color: #4f46e5; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+        button:hover { background-color: #4338ca; }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button id="copy-btn">Copy Editable Code</button>
+    </div>
+    <div id="flowchart-container">Rendering...</div>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: false });
+
+        const mermaidCode = \`${escapedCode}\`;
+        const container = document.getElementById('flowchart-container');
+        
+        document.getElementById('copy-btn').addEventListener('click', () => {
+            navigator.clipboard.writeText(mermaidCode).then(() => {
+                alert('Mermaid code copied to clipboard! You can now paste this into Lucidchart or another editor.');
+            }, () => {
+                alert('Failed to copy code.');
+            });
+        });
+
+        async function render() {
+            try {
+                const { svg } = await mermaid.render('graphDiv', mermaidCode);
+                container.innerHTML = svg;
+            } catch (e) {
+                container.innerHTML = '<div class="error">Error rendering diagram: ' + e.message + '</div>';
+            }
+        }
+        render();
+    </script>
+</body>
+</html>`;
+};
+
 
 // ===================================================================================
 // --- AI Model Adapters ---
@@ -484,7 +541,7 @@ const generateBRDWithGeminiAdapter = async (anonymizedContent) => {
 HERE IS THE BRD TEMPLATE TO USE FOR YOUR OUTPUT. GENERATE HIGH-QUALITY OUTPUT AFTER CONSIDERING THE BELOW TEMPLATE:
 ${BRD_MARKDOWN_TEMPLATE}
 ---
-ANALYZE THE FOLLOWING TRANSCRIPT AND GENERATE A HIGH-QUALITY BRD:
+ANALYZE THE FOLLOWING TRANSCRIPT AND GENERATE A HIGH-QUALITY BRD WHILE STRICTLY FOLLOWING ALL THE ABOVE INSTRUCTIONS:
 ${anonymizedContent}`;
 
     const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
@@ -717,7 +774,6 @@ const anonymizeText = async (text) => {
 // --- API Endpoints (Refactored to use Caching) ---
 // ===================================================================================
 
-// **RE-ARCHITECTED**: Handles multiple files, aggregates data, and returns a mix of single files and a zip file.
 app.post('/api/generate', upload.array('files', 10), async (req, res) => {
     const reqId = uuidv4().slice(0, 8);
     console.log(`[${reqId}] Received request for /api/generate with ${req.files.length} file(s).`);
@@ -762,20 +818,23 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
             }
         }
 
-        // **FIXED**: Use the new sanitizer function before generating flows.
         if (requestedArtifacts.includes('asisFlow') && brdText) {
-            console.log(`[${reqId}] Generating As-Is Flow from anonymized BRD...`);
+            console.log(`[${reqId}] Generating As-Is Flow...`);
             const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
-            const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText); // Sanitize the input
+            const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
             const mermaidCode = await generateFlowchart(sanitizedAsIsText);
-            generatedResults.asisFlow = { fileName: 'As_Is_Flow.txt', content: Buffer.from(mermaidCode).toString('base64'), contentType: 'text/plain' };
+            // Generate both the editable .txt and the viewable .html
+            generatedResults.asisFlow = { fileName: 'As_Is_Flow_Editable.txt', content: Buffer.from(mermaidCode).toString('base64'), contentType: 'text/plain' };
+            generatedResults.asisFlowView = { fileName: 'As_Is_Flow_View.html', content: Buffer.from(createFlowchartHtml(mermaidCode)).toString('base64'), contentType: 'text/html' };
         }
         if (requestedArtifacts.includes('tobeFlow') && brdText) {
-            console.log(`[${reqId}] Generating To-Be Flow from anonymized BRD...`);
+            console.log(`[${reqId}] Generating To-Be Flow...`);
             const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
-            const sanitizedToBeText = sanitizeTextForFlowchart(toBeText); // Sanitize the input
+            const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
             const mermaidCode = await generateFlowchart(sanitizedToBeText);
-            generatedResults.tobeFlow = { fileName: 'To_Be_Flow.txt', content: Buffer.from(mermaidCode).toString('base64'), contentType: 'text/plain' };
+            // Generate both the editable .txt and the viewable .html
+            generatedResults.tobeFlow = { fileName: 'To_Be_Flow_Editable.txt', content: Buffer.from(mermaidCode).toString('base64'), contentType: 'text/plain' };
+            generatedResults.tobeFlowView = { fileName: 'To_Be_Flow_View.html', content: Buffer.from(createFlowchartHtml(mermaidCode)).toString('base64'), contentType: 'text/html' };
         }
 
         if (requestedArtifacts.includes('anonymized')) {
