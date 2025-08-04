@@ -261,12 +261,12 @@ export default function App() {
 
     // **MODIFIED**: Switched to a more realistic, timed sequence of loading steps.
     const loadingSteps = [
-        { message: "Analyzing documents for key entities...", progress: 10, duration: 4000 },
-        { message: "Masking confidential information...", progress: 25, duration: 3500 },
-        { message: "Drafting Business Requirements Document...", progress: 50, duration: 8000 },
-        { message: "Creating As-Is Process Flow...", progress: 65, duration: 4000 },
-        { message: "Creating To-Be Process Flow...", progress: 80, duration: 4000 },
-        { message: "Packaging final artifacts...", progress: 95, duration: 2000 },
+        { message: "Analyzing documents for key entities...", progress: 15, duration: 6000 },
+        { message: "Masking confidential information...", progress: 30, duration: 6000 },
+        { message: "Drafting Business Requirements Document...", progress: 45, duration: 20000 },
+        { message: "Creating As-Is Process Flow...", progress: 69, duration: 10000 },
+        { message: "Creating To-Be Process Flow...", progress: 80, duration: 10000 },
+        { message: "Packaging final artifacts...", progress: 95, duration: 2500 },
     ];
 
     useEffect(() => {

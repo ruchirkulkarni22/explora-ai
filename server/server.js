@@ -312,9 +312,9 @@ The section to extract is: `;
 // configuration settings for AI providers
 const aiConfig = {
     entityExtractionProvider: 'spacy',
-    brdGenerationProvider: 'gemini',
-    flowGenerationProvider: 'gemini', // This now generates JSON
-    sectionExtractionProvider: 'gemini',
+    brdGenerationProvider: 'openrouter',
+    flowGenerationProvider: 'openrouter', // This now generates JSON
+    sectionExtractionProvider: 'openrouter',
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
@@ -332,9 +332,9 @@ const aiConfig = {
     },
     openrouter: {
         apiKey: process.env.OPENROUTER_API_KEY,
-        brdGenerationModel: 'deepseek/deepseek-coder',
-        flowGenerationModel: 'anthropic/claude-3-haiku',
-        sectionExtractionModel: 'anthropic/claude-3-haiku',
+        brdGenerationModel: 'z-ai/glm-4.5-air:free',
+        flowGenerationModel: 'z-ai/glm-4.5-air:free',
+        sectionExtractionModel: 'z-ai/glm-4.5-air:free',
         apiBaseUrl: 'https://openrouter.ai/api/v1',
         siteUrl: 'http://localhost:3000',
         appName: 'Explora'
@@ -855,6 +855,12 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
     }
 
     try {
+        // Add this code right after the `try {` line
+        const firstFile = req.files[0];
+        const originalName = firstFile.originalname;
+        const baseName = originalName.includes('.')
+            ? originalName.substring(0, originalName.lastIndexOf('.'))
+            : originalName;
         let combinedOriginalContent = '';
         const originalFilesContent = [];
         for (const file of req.files) {
@@ -886,7 +892,7 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
                     finalBRDText = finalBRDText.replace(regex, original);
                 }
                 const docxBuffer = await createDocxBufferFromMarkdown(finalBRDText);
-                generatedResults.brd = { type: 'docx', fileName: 'BRD_Explora_Unified.docx', content: docxBuffer.toString('base64'), contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+                generatedResults.brd = { type: 'docx', fileName: `${baseName}_BRD.docx`, content: docxBuffer.toString('base64'), contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
             }
         }
 
@@ -895,14 +901,14 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
             const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
             const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
             const bpmnXml = await generateBpmnFromProcessDescription(sanitizedAsIsText, executiveSummary);
-            generatedResults.asisFlow = { type: 'bpmn', fileName: 'As_Is_Flow.bpmn', content: bpmnXml, contentType: 'application/xml' };
+            generatedResults.asisFlow = { type: 'bpmn', fileName: `${baseName}_As_Is_Flow.bpmn`, content: bpmnXml, contentType: 'application/xml' };
         }
         if (requestedArtifacts.includes('tobeFlow') && brdText) {
             console.log(`[${reqId}] Generating To-Be Flow...`);
             const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
             const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
             const bpmnXml = await generateBpmnFromProcessDescription(sanitizedToBeText, executiveSummary);
-            generatedResults.tobeFlow = { type: 'bpmn', fileName: 'To_Be_Flow.bpmn', content: bpmnXml, contentType: 'application/xml' };
+            generatedResults.tobeFlow = { type: 'bpmn', fileName: `${baseName}_To_Be_Flow.bpmn`, content: bpmnXml, contentType: 'application/xml' };
         }
 
         if (requestedArtifacts.includes('anonymized')) {
@@ -920,7 +926,7 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
                 zip.file(result.fileName, result.content);
             }
             const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-            generatedResults.anonymized = { type: 'zip', fileName: 'Anonymized_Texts.zip', content: zipBuffer.toString('base64'), contentType: 'application/zip' };
+            generatedResults.anonymized = { type: 'zip', fileName: `${baseName}_Anonymized_Texts.zip`, content: zipBuffer.toString('base64'), contentType: 'application/zip' };
         }
 
         if (requestedArtifacts.includes('mapping')) {
@@ -929,7 +935,7 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
             for (let [code, original] of masterMapping.entries()) {
                 csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
             }
-            generatedResults.mapping = { type: 'csv', fileName: 'Redaction_Key.csv', content: Buffer.from(csvContent).toString('base64'), contentType: 'text/csv' };
+            generatedResults.mapping = { type: 'csv', fileName: `${baseName}_Anonymized_Texts.zip`, content: Buffer.from(csvContent).toString('base64'), contentType: 'text/csv' };
         }
 
         console.log(`[${reqId}] Successfully generated all requested artifacts.`);
