@@ -1,11 +1,101 @@
 // client/src/App.js
-// **DEFINITIVE FIX**: This version handles the new server response, which provides
-// both a viewable HTML file and a separate editable .txt file for process flows.
-// The UI is updated to present both options clearly to the user.
+// This version integrates a full BPMN.io diagram editor for in-browser editing of process flows.
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FileText, TestTube2, Presentation, Loader2, UploadCloud, ChevronLeft, AlertCircle, CheckCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive, Eye, FileCode2 } from 'lucide-react';
+import { FileText, TestTube2, Presentation, Loader2, UploadCloud, ChevronLeft, AlertCircle, CheckCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive, Edit, Image, FileCode } from 'lucide-react';
+import BpmnJS from 'bpmn-js/lib/Modeler';
+import 'bpmn-js/dist/assets/diagram-js.css';
+import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
+
+
+// --- BPMN Editor Component ---
+const BpmnEditor = ({ bpmnXml, onBack, diagramName }) => {
+    const canvasRef = useRef(null);
+    const modelerRef = useRef(null);
+    const [isModelerReady, setIsModelerReady] = useState(false);
+
+    useEffect(() => {
+        if (!canvasRef.current) return;
+
+        const modeler = new BpmnJS({
+            container: canvasRef.current,
+            keyboard: {
+                bindTo: window
+            }
+        });
+        modelerRef.current = modeler;
+
+        const openDiagram = async (xml) => {
+            try {
+                await modeler.importXML(xml);
+                const canvas = modeler.get('canvas');
+                canvas.zoom('fit-viewport');
+                setIsModelerReady(true);
+            } catch (err) {
+                console.error('Error importing BPMN XML', err);
+            }
+        };
+
+        if (bpmnXml) {
+            openDiagram(bpmnXml);
+        }
+
+        return () => {
+            modeler.destroy();
+            setIsModelerReady(false);
+        };
+    }, [bpmnXml]);
+
+    const handleExport = async (type) => {
+        if (!modelerRef.current) return;
+
+        try {
+            if (type === 'svg') {
+                const { svg } = await modelerRef.current.saveSVG();
+                downloadFile(`${diagramName}.svg`, svg, 'image/svg+xml');
+            } else {
+                const { xml } = await modelerRef.current.saveXML({ format: true });
+                downloadFile(`${diagramName}.bpmn`, xml, 'application/xml');
+            }
+        } catch (err) {
+            console.error('Failed to export', err);
+        }
+    };
+
+    const downloadFile = (filename, data, mimeType) => {
+        const blob = new Blob([data], { type: mimeType });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+
+    return (
+        <div className="w-full h-[80vh] bg-white rounded-2xl shadow-2xl flex flex-col p-4 border-2 border-gray-200">
+            <div className="flex justify-between items-center mb-4 pb-4 border-b">
+                 <button onClick={onBack} className="flex items-center text-indigo-600 font-semibold hover:text-indigo-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Results</button>
+                 <h3 className="text-xl font-bold text-gray-800">{diagramName}</h3>
+                 <div className="flex items-center gap-4">
+                    <button onClick={() => handleExport('bpmn')} disabled={!isModelerReady} className="flex items-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-all disabled:bg-gray-400">
+                        <FileCode className="w-5 h-5" /> Export BPMN
+                    </button>
+                     <button onClick={() => handleExport('svg')} disabled={!isModelerReady} className="flex items-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-green-700 transition-all disabled:bg-gray-400">
+                        <Image className="w-5 h-5" /> Export SVG
+                    </button>
+                 </div>
+            </div>
+            <div ref={canvasRef} className="flex-grow w-full h-full bg-gray-50 rounded-lg border">
+                {!isModelerReady && <div className="flex items-center justify-center h-full"><Loader2 className="w-12 h-12 animate-spin text-indigo-500" /></div>}
+            </div>
+        </div>
+    );
+};
+
 
 // --- Helper Components ---
 const Card = ({ icon, title, description, enabled = false, onClick }) => (
@@ -76,8 +166,8 @@ const ArtifactCheckbox = ({ id, label, checked, onChange, icon }) => (
     </div>
 );
 
-const SuccessDisplay = ({ onReset, generatedArtifacts }) => {
-    const handleAction = (artifact) => {
+const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
+    const handleDownload = (artifact) => {
         const byteCharacters = atob(artifact.content);
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -86,30 +176,17 @@ const SuccessDisplay = ({ onReset, generatedArtifacts }) => {
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: artifact.contentType });
         const url = window.URL.createObjectURL(blob);
-
-        if (artifact.contentType === 'text/html') {
-            // Open the self-contained HTML file in a new tab for viewing
-            window.open(url, '_blank');
-        } else {
-            // Standard download logic for all other file types
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', artifact.fileName);
-            document.body.appendChild(link);
-            link.click();
-            link.parentNode.removeChild(link);
-        }
-        // Do not revoke object URL for blobs opened in new tabs, as it might close prematurely.
-        // The browser will handle cleanup when the tab is closed.
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', artifact.fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.parentNode.removeChild(link);
     };
     
-    // Group flow artifacts together
-    const asIsFlow = generatedArtifacts.asisFlow;
-    const asIsFlowView = generatedArtifacts.asisFlowView;
-    const toBeFlow = generatedArtifacts.tobeFlow;
-    const toBeFlowView = generatedArtifacts.tobeFlowView;
-
-    const otherArtifacts = Object.entries(generatedArtifacts).filter(([key]) => !key.toLowerCase().includes('flow'));
+    // Separate artifacts into downloadable and editable
+    const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type !== 'bpmn');
+    const editableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type === 'bpmn');
 
     return (
         <div className="text-center p-8 bg-green-50 rounded-2xl max-w-4xl mx-auto border-2 border-green-200">
@@ -118,35 +195,33 @@ const SuccessDisplay = ({ onReset, generatedArtifacts }) => {
             <p className="text-gray-600 mb-8">Your selected artifacts are ready.</p>
             
             <div className="space-y-6">
-                {/* Render standard artifacts */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {otherArtifacts.map(([key, artifact]) => (
-                         <button key={key} onClick={() => handleAction(artifact)} className="w-full bg-indigo-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center">
-                            <Download className="w-6 h-6 mr-3" />
-                            Download {key.charAt(0).toUpperCase() + key.slice(1)}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Render As-Is Flow Artifacts */}
-                {asIsFlow && asIsFlowView && (
-                    <div className="bg-white p-4 rounded-lg shadow">
-                         <h4 className="font-semibold text-lg text-gray-800 mb-3">As-Is Process Flow</h4>
-                         <div className="flex justify-center gap-4">
-                             <button onClick={() => handleAction(asIsFlowView)} className="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-all flex items-center justify-center"><Eye className="w-5 h-5 mr-2" />View Flow</button>
-                             <button onClick={() => handleAction(asIsFlow)} className="flex-1 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-gray-700 transition-all flex items-center justify-center"><FileCode2 className="w-5 h-5 mr-2" />Get Editable Code</button>
-                         </div>
+                {/* Render Editable Artifacts (Diagrams) */}
+                {editableArtifacts.length > 0 && (
+                    <div className="bg-white p-4 rounded-lg shadow space-y-4">
+                         <h4 className="font-semibold text-lg text-gray-800">Editable Process Flows</h4>
+                         {editableArtifacts.map(([key, artifact]) => (
+                             <div key={key}>
+                                 <button onClick={() => onEditDiagram(artifact)} className="w-full bg-blue-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center">
+                                    <Edit className="w-6 h-6 mr-3" />
+                                    Edit {artifact.fileName.replace('.bpmn', '')}
+                                </button>
+                             </div>
+                         ))}
                     </div>
                 )}
-                
-                {/* Render To-Be Flow Artifacts */}
-                {toBeFlow && toBeFlowView && (
+
+                {/* Render Downloadable Artifacts */}
+                {downloadableArtifacts.length > 0 && (
                      <div className="bg-white p-4 rounded-lg shadow">
-                         <h4 className="font-semibold text-lg text-gray-800 mb-3">To-Be Process Flow</h4>
-                         <div className="flex justify-center gap-4">
-                             <button onClick={() => handleAction(toBeFlowView)} className="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-all flex items-center justify-center"><Eye className="w-5 h-5 mr-2" />View Flow</button>
-                             <button onClick={() => handleAction(toBeFlow)} className="flex-1 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-gray-700 transition-all flex items-center justify-center"><FileCode2 className="w-5 h-5 mr-2" />Get Editable Code</button>
-                         </div>
+                         <h4 className="font-semibold text-lg text-gray-800 mb-3">Downloadable Documents</h4>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {downloadableArtifacts.map(([key, artifact]) => (
+                                 <button key={key} onClick={() => handleDownload(artifact)} className="w-full bg-indigo-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center">
+                                    <Download className="w-6 h-6 mr-3" />
+                                    Download {key.charAt(0).toUpperCase() + key.slice(1)}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
@@ -161,12 +236,13 @@ const SuccessDisplay = ({ onReset, generatedArtifacts }) => {
 
 // --- Main App Component ---
 export default function App() {
-    const [page, setPage] = useState('landing');
+    const [page, setPage] = useState('landing'); // landing, brdGenerator, diagramEditor
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [isSuccess, setIsSuccess] = useState(false);
     const [generatedArtifacts, setGeneratedArtifacts] = useState({});
+    const [diagramToEdit, setDiagramToEdit] = useState(null); // Holds the BPMN XML for the editor
     
     const [selectedArtifacts, setSelectedArtifacts] = useState({
         brd: true,
@@ -191,9 +267,9 @@ export default function App() {
     };
 
     const artifactOptions = [
-        { id: 'brd', label: 'Unified BRD', icon: <FileText className="w-6 h-6 text-indigo-500 mr-3" />},
+        { id: 'brd', label: 'Unified BRD (.docx)', icon: <FileText className="w-6 h-6 text-indigo-500 mr-3" />},
         { id: 'anonymized', label: 'Anonymized Texts (.zip)', icon: <FileArchive className="w-6 h-6 text-gray-500 mr-3" />},
-        { id: 'mapping', label: 'Consolidated Key', icon: <KeyRound className="w-6 h-6 text-yellow-500 mr-3" />},
+        { id: 'mapping', label: 'Consolidated Key (.csv)', icon: <KeyRound className="w-6 h-6 text-yellow-500 mr-3" />},
         { id: 'asisFlow', label: 'As-Is Process Flow', icon: <Workflow className="w-6 h-6 text-blue-500 mr-3" />},
         { id: 'tobeFlow', label: 'To-Be Process Flow', icon: <Workflow className="w-6 h-6 text-green-500 mr-3" />}
     ];
@@ -204,7 +280,18 @@ export default function App() {
         setError(null);
         setIsSuccess(false);
         setGeneratedArtifacts({});
+        setDiagramToEdit(null);
     }, []);
+    
+    const handleBackToResults = () => {
+        setDiagramToEdit(null);
+        setPage('brdGenerator');
+    };
+
+    const handleEditDiagram = (diagramArtifact) => {
+        setDiagramToEdit(diagramArtifact);
+        setPage('diagramEditor');
+    };
 
     const handleGenerateClick = () => { setPage('brdGenerator'); resetState(); };
     const handleBackClick = () => { setPage('landing'); resetState(); };
@@ -263,7 +350,7 @@ export default function App() {
             </div>
 
             {isLoading && <LoadingSpinner message="AI is analyzing and generating your documents..." />}
-            {isSuccess && <SuccessDisplay onReset={resetState} generatedArtifacts={generatedArtifacts} />}
+            {isSuccess && !diagramToEdit && <SuccessDisplay onReset={resetState} generatedArtifacts={generatedArtifacts} onEditDiagram={handleEditDiagram} />}
 
             {!isLoading && !isSuccess && (
                 <>
@@ -289,11 +376,23 @@ export default function App() {
             )}
         </div>
     );
+    
+    const renderContent = () => {
+        switch(page) {
+            case 'landing':
+                return renderLandingPage();
+            case 'diagramEditor':
+                return <BpmnEditor bpmnXml={diagramToEdit.content} onBack={handleBackToResults} diagramName={diagramToEdit.fileName} />;
+            case 'brdGenerator':
+            default:
+                return renderBrdGeneratorPage();
+        }
+    }
 
     return (
         <div className="bg-gray-50 min-h-screen font-sans">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
-                {page === 'landing' ? renderLandingPage() : renderBrdGeneratorPage()}
+                {renderContent()}
             </div>
         </div>
     );

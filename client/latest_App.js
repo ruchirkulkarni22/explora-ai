@@ -1,10 +1,11 @@
 // client/src/App.js
-// **MAJOR FIX**: This version now opens process flows in the local `flowchart.html`
-// viewer instead of an external website, providing a seamless, integrated experience.
+// **DEFINITIVE FIX**: This version handles the new server response, which provides
+// both a viewable HTML file and a separate editable .txt file for process flows.
+// The UI is updated to present both options clearly to the user.
 
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
-import { FileText, TestTube2, Presentation, Loader2, UploadCloud, ChevronLeft, AlertCircle, CheckCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive } from 'lucide-react';
+import { FileText, TestTube2, Presentation, Loader2, UploadCloud, ChevronLeft, AlertCircle, CheckCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive, Eye, FileCode2 } from 'lucide-react';
 
 // --- Helper Components ---
 const Card = ({ icon, title, description, enabled = false, onClick }) => (
@@ -76,60 +77,81 @@ const ArtifactCheckbox = ({ id, label, checked, onChange, icon }) => (
 );
 
 const SuccessDisplay = ({ onReset, generatedArtifacts }) => {
-    const handleDownload = (artifact) => {
-        // **FIXED**: This logic now correctly handles opening local flowchart.html
-        if (artifact.fileName.includes('Flow')) {
-            const mermaidCode = atob(artifact.content); // Decode from base64
-            const encodedMermaidCode = encodeURIComponent(mermaidCode);
-            // Open the local flowchart viewer with the code as a URL parameter
-            window.open(`flowchart.html?code=${encodedMermaidCode}`, '_blank');
+    const handleAction = (artifact) => {
+        const byteCharacters = atob(artifact.content);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: artifact.contentType });
+        const url = window.URL.createObjectURL(blob);
+
+        if (artifact.contentType === 'text/html') {
+            // Open the self-contained HTML file in a new tab for viewing
+            window.open(url, '_blank');
         } else {
             // Standard download logic for all other file types
-            const byteCharacters = atob(artifact.content);
-            const byteNumbers = new Array(byteCharacters.length);
-            for (let i = 0; i < byteCharacters.length; i++) {
-                byteNumbers[i] = byteCharacters.charCodeAt(i);
-            }
-            const byteArray = new Uint8Array(byteNumbers);
-            const blob = new Blob([byteArray], { type: artifact.contentType });
-            const url = window.URL.createObjectURL(blob);
-            
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', artifact.fileName);
             document.body.appendChild(link);
             link.click();
             link.parentNode.removeChild(link);
-            window.URL.revokeObjectURL(url);
         }
+        // Do not revoke object URL for blobs opened in new tabs, as it might close prematurely.
+        // The browser will handle cleanup when the tab is closed.
     };
     
-    const getArtifactInfo = (key) => {
-        if (key === 'brd') return { label: 'Download BRD', icon: <Download className="w-6 h-6 mr-3" /> };
-        if (key === 'mapping') return { label: 'Download Key', icon: <KeyRound className="w-6 h-6 mr-3" /> };
-        if (key === 'anonymized') return { label: 'Download Texts', icon: <FileArchive className="w-6 h-6 mr-3" /> };
-        if (key === 'asisFlow') return { label: 'View As-Is Flow', icon: <Workflow className="w-6 h-6 mr-3" /> };
-        if (key === 'tobeFlow') return { label: 'View To-Be Flow', icon: <Workflow className="w-6 h-6 mr-3" /> };
-        return { label: 'Download', icon: <Download className="w-6 h-6 mr-3" /> };
-    };
+    // Group flow artifacts together
+    const asIsFlow = generatedArtifacts.asisFlow;
+    const asIsFlowView = generatedArtifacts.asisFlowView;
+    const toBeFlow = generatedArtifacts.tobeFlow;
+    const toBeFlowView = generatedArtifacts.tobeFlowView;
+
+    const otherArtifacts = Object.entries(generatedArtifacts).filter(([key]) => !key.toLowerCase().includes('flow'));
 
     return (
         <div className="text-center p-8 bg-green-50 rounded-2xl max-w-4xl mx-auto border-2 border-green-200">
             <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-gray-800 mb-3">Generation Complete!</h2>
             <p className="text-gray-600 mb-8">Your selected artifacts are ready.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-                {Object.entries(generatedArtifacts).map(([key, artifact]) => {
-                    const { label, icon } = getArtifactInfo(key);
-                    return (
-                        <button key={key} onClick={() => handleDownload(artifact)} className="w-full bg-indigo-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center">
-                            {icon}
-                            {label}
+            
+            <div className="space-y-6">
+                {/* Render standard artifacts */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {otherArtifacts.map(([key, artifact]) => (
+                         <button key={key} onClick={() => handleAction(artifact)} className="w-full bg-indigo-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center">
+                            <Download className="w-6 h-6 mr-3" />
+                            Download {key.charAt(0).toUpperCase() + key.slice(1)}
                         </button>
-                    );
-                })}
+                    ))}
+                </div>
+
+                {/* Render As-Is Flow Artifacts */}
+                {asIsFlow && asIsFlowView && (
+                    <div className="bg-white p-4 rounded-lg shadow">
+                         <h4 className="font-semibold text-lg text-gray-800 mb-3">As-Is Process Flow</h4>
+                         <div className="flex justify-center gap-4">
+                             <button onClick={() => handleAction(asIsFlowView)} className="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-all flex items-center justify-center"><Eye className="w-5 h-5 mr-2" />View Flow</button>
+                             <button onClick={() => handleAction(asIsFlow)} className="flex-1 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-gray-700 transition-all flex items-center justify-center"><FileCode2 className="w-5 h-5 mr-2" />Get Editable Code</button>
+                         </div>
+                    </div>
+                )}
+                
+                {/* Render To-Be Flow Artifacts */}
+                {toBeFlow && toBeFlowView && (
+                     <div className="bg-white p-4 rounded-lg shadow">
+                         <h4 className="font-semibold text-lg text-gray-800 mb-3">To-Be Process Flow</h4>
+                         <div className="flex justify-center gap-4">
+                             <button onClick={() => handleAction(toBeFlowView)} className="flex-1 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-all flex items-center justify-center"><Eye className="w-5 h-5 mr-2" />View Flow</button>
+                             <button onClick={() => handleAction(toBeFlow)} className="flex-1 bg-gray-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-gray-700 transition-all flex items-center justify-center"><FileCode2 className="w-5 h-5 mr-2" />Get Editable Code</button>
+                         </div>
+                    </div>
+                )}
             </div>
-            <button onClick={onReset} className="text-indigo-600 font-semibold hover:underline">
+
+            <button onClick={onReset} className="mt-8 text-indigo-600 font-semibold hover:underline">
                 Generate More Documents
             </button>
         </div>

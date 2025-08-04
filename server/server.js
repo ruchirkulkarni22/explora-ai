@@ -1,5 +1,8 @@
 // server/server.js
-// This is the final, reviewed, and stable backend for the Explora application.
+// This version is updated to generate BPMN 2.0 XML for process flows,
+// enabling in-browser editing with bpmn-js on the frontend.
+// QUALITY UPGRADE: Implemented a structured JSON-first approach for BPMN generation
+// to improve diagram accuracy and reliability.
 
 require('dotenv').config();
 const express = require('express');
@@ -11,8 +14,7 @@ const mammoth = require('mammoth');
 const docx = require('docx');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType } = docx;
 const { spawn } = require('child_process');
-const crypto = require('crypto');
-const jszip = require('jszip'); // New dependency for zipping files
+const jszip = require('jszip');
 
 const app = express();
 const port = 3001;
@@ -21,7 +23,6 @@ const port = 3001;
 app.use(cors());
 app.use(express.json());
 const storage = multer.memoryStorage();
-// **MODIFIED**: Switched from .single() to .array() to accept multiple files.
 const upload = multer({
     storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit per file
@@ -63,16 +64,16 @@ Professional Standards:
 •	Use clear, concise, and unambiguous language
 •	Maintain consistent formatting and numbering
 •	Include proper section headers and subsections
-•	Ensure logical flow and organization
+	•	Ensure logical flow and organization
 Template Compliance:
 •	Follow the exact structure provided in the sample template
 •	Populate all required fields and columns
-•	Maintain any specific formatting requirements
+	•	Maintain any specific formatting requirements
 	•	Include placeholder text or "TBD" for missing information that should be clarified
 Content Quality:
 •	Ensure each requirement is atomic (one requirement per item)
 •	Use active voice and specific terminology
-•	Include acceptance criteria where applicable
+	•	Include acceptance criteria where applicable
 	•	Provide sufficient detail for development teams
 Processing Instructions
 1.	Initial Analysis:
@@ -81,15 +82,15 @@ o	Identify key themes and patterns
 	o	Note any contradictions or ambiguities
 2.	Requirement Extraction:
 o	Extract explicit requirements (directly stated)
-o	Infer implicit requirements (implied by context)
+	o	Infer implicit requirements (implied by context)
 	o	Organize by functional area or process
 3.	Template Population:
 o	Map extracted requirements to template sections
-o	Ensure all template fields are addressed
+	o	Ensure all template fields are addressed
 	o	Maintain traceability to source materials
 4.	Quality Review:
 o	Check for completeness and consistency
-o	Verify requirements are testable and measurable
+	o	Verify requirements are testable and measurable
 	o	Ensure professional presentation
 Special Considerations
 •	Ambiguity Resolution: When requirements are unclear, note assumptions made and recommend clarification
@@ -215,34 +216,89 @@ const BRD_MARKDOWN_TEMPLATE = `
 | [Approver Name] | [Role] | ____________________ |
 `;
 
-// **FIXED**: The prompt is now much stricter to prevent invalid syntax generation.
-const FLOWCHART_PROMPT = `You are a specialist AI that ONLY generates Mermaid.js flowchart code.
-**ABSOLUTE RULES:**
-1.  Your ENTIRE response MUST be a single Mermaid code block starting with \`\`\`mermaid and ending with \`\`\`.
-2.  The first line inside the code block MUST be \`graph TD;\`.
-3.  Use simple IDs for nodes (e.g., A, B, C1, C2).
-4.  Define node text within brackets: \`A[Text for Step 1]\`. Use curly braces for decisions: \`B{Is condition met?}\`.
-5.  Connect nodes ONLY with \`-->\`.
-6.  Label decision paths like this: \`B-- Yes -->C\` or \`B-- No -->D\`.
-7.  DO NOT add ANY comments, explanations, or text outside the \`\`\`mermaid\`\`\` block.
-8.  DO NOT use subgraphs or any advanced features. Stick to basic nodes and connections.
-9. You cannot use brackets "(" or ")" anywhere in the flowchart. 
-For example: B -- Approved --> C[Process Payment (Processing)]; 
-This is not allowed, because we have brackets in the node text.
+// **QUALITY UPGRADE**: New prompt to extract a structured JSON from process text.
+const PROCESS_TO_JSON_PROMPT = `You are a system that translates natural language process descriptions into a structured JSON format suitable for BPMN diagram generation.
 
-**EXAMPLE OF A PERFECT RESPONSE:**
-\`\`\`mermaid
-graph TD;
-    A[Start] --> B{Check Status};
-    B -- Approved --> C[Process Payment];
-    B -- Rejected --> D[Send Notification];
-    C --> E[End];
-    D --> E;
-\`\`\`
+**TASK:** Analyze the provided process description and executive summary. Your entire output must be a single JSON object.
 
-**YOUR TASK:**
-Convert the following process description into Mermaid code, following all rules strictly and precisely.
+**JSON STRUCTURE:**
+The JSON object must have two top-level keys: "lanes" and "nodes".
+
+1.  **"lanes"**: An array of strings representing the actors or systems in the process (e.g., "Customer", "Sales System", "Manager"). Identify these from the text. If no specific roles are mentioned, use a default lane like "System".
+
+2.  **"nodes"**: An array of objects, where each object represents a step, decision, or event in the process. Each node must have the following properties:
+    * **"id"**: A unique integer identifier for the node (e.g., 1, 2, 3).
+    * **"name"**: A concise, verb-first label for the node (e.g., "Submit Application", "Is application complete?", "Process Approved").
+    * **"type"**: The type of BPMN element. Must be one of: "start", "end", "task", "decision".
+    * **"lane"**: The name of the lane (from the "lanes" array) that this node belongs to.
+    * **"outputs"**: An array of objects describing the connections from this node to others. Each connection object must have:
+        * **"target"**: The integer "id" of the node it connects to.
+        * **"label"**: (Optional) A label for the connection, ONLY for outputs from a "decision" node (e.g., "Yes", "No", "Needs More Info").
+
+**RULES:**
+* The first node must be of type "start".
+* All process paths must eventually lead to a node of type "end".
+* "decision" nodes must have at least two outputs, each with a "label".
+* "task", "start", and "end" nodes should have exactly one output, with no "label".
+* Ensure all node "id"s referenced in "outputs" exist.
+* The entire response must be ONLY the JSON object, starting with \`{\` and ending with \`}\`. Do not wrap it in markdown.
+
+**EXAMPLE:**
+Process Description: "The customer submits an order. The system checks if the item is in stock. If it is, the system processes the payment. If not, it notifies the customer that the item is backordered. The process ends after payment or notification."
+
+**PERFECT JSON OUTPUT:**
+{
+  "lanes": ["Customer", "System"],
+  "nodes": [
+    {
+      "id": 1,
+      "name": "Order Submitted",
+      "type": "start",
+      "lane": "Customer",
+      "outputs": [{ "target": 2 }]
+    },
+    {
+      "id": 2,
+      "name": "Submit Order",
+      "type": "task",
+      "lane": "Customer",
+      "outputs": [{ "target": 3 }]
+    },
+    {
+      "id": 3,
+      "name": "Is item in stock?",
+      "type": "decision",
+      "lane": "System",
+      "outputs": [
+        { "target": 4, "label": "Yes" },
+        { "target": 5, "label": "No" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Process Payment",
+      "type": "task",
+      "lane": "System",
+      "outputs": [{ "target": 6 }]
+    },
+    {
+      "id": 5,
+      "name": "Notify Customer of Backorder",
+      "type": "task",
+      "lane": "System",
+      "outputs": [{ "target": 6 }]
+    },
+    {
+      "id": 6,
+      "name": "Process Complete",
+      "type": "end",
+      "lane": "System",
+      "outputs": []
+    }
+  ]
+}
 `;
+
 
 // Prompt to intelligently extract a section from a document
 const SECTION_EXTRACTOR_PROMPT = `You are an expert text analysis AI. Your task is to extract a specific section from the provided document.
@@ -257,20 +313,18 @@ The section to extract is: `;
 const aiConfig = {
     entityExtractionProvider: 'spacy',
     brdGenerationProvider: 'gemini',
-    flowGenerationProvider: 'gemini',
+    flowGenerationProvider: 'gemini', // This now generates JSON
     sectionExtractionProvider: 'gemini',
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
-        entityExtractionModel: 'gemini-2.0-flash',
-        brdGenerationModel: 'gemini-2.5-flash',
-        flowGenerationModel: 'gemini-2.5-flash',
-        sectionExtractionModel: 'gemini-2.0-flash',
+        brdGenerationModel: 'gemini-1.5-flash',
+        flowGenerationModel: 'gemini-1.5-flash',
+        sectionExtractionModel: 'gemini-1.5-flash',
         apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
     },
     openai: {
         apiKey: process.env.OPENAI_API_KEY,
-        entityExtractionModel: 'gpt-3.5-turbo',
         brdGenerationModel: 'gpt-4o',
         flowGenerationModel: 'gpt-4o',
         sectionExtractionModel: 'gpt-4o',
@@ -278,9 +332,9 @@ const aiConfig = {
     },
     openrouter: {
         apiKey: process.env.OPENROUTER_API_KEY,
-        brdGenerationModel: 'deepseek/deepseek-r1:free',
-        flowGenerationModel: 'deepseek/deepseek-r1:free',
-        sectionExtractionModel: 'deepseek/deepseek-r1-0528:free',
+        brdGenerationModel: 'deepseek/deepseek-coder',
+        flowGenerationModel: 'anthropic/claude-3-haiku',
+        sectionExtractionModel: 'anthropic/claude-3-haiku',
         apiBaseUrl: 'https://openrouter.ai/api/v1',
         siteUrl: 'http://localhost:3000',
         appName: 'Explora'
@@ -294,13 +348,12 @@ const aiConfig = {
 // --- Helper Functions ---
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-//Sanitizes text to remove confusing formatting before sending to the AI.
 const sanitizeTextForFlowchart = (text) => {
     if (!text) return '';
     return text.split('\n')
-        .filter(line => !/^[\s*\-=_]{3,}$/.test(line.trim())) // Remove horizontal rules
-        .map(line => line.replace(/^(\s*(\*|\-|\d+\.)\s*)+/, '')) // Remove list markers
-        .filter(line => line.trim().length > 0) // Remove empty lines
+        .filter(line => !/^[\s*\-=_]{3,}$/.test(line.trim()))
+        .map(line => line.replace(/^(\s*(\*|\-|\d+\.)\s*)+/, ''))
+        .filter(line => line.trim().length > 0)
         .join('\n');
 };
 
@@ -415,65 +468,11 @@ const parseInlineFormatting = (line) => {
     return runs;
 };
 
-// **NEW**: Function to create a self-contained HTML viewer for a flowchart.
-const createFlowchartHtml = (mermaidCode) => {
-    // Escape backticks in the mermaid code to prevent breaking the template literal
-    const escapedCode = mermaidCode.replace(/`/g, '\\`');
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Process Flow Diagram</title>
-    <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: #f9fafb; }
-        #flowchart-container { background-color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: center; }
-        .error { color: #b91c1c; border: 1px dashed #f87171; background-color: #fee2e2; padding: 15px; border-radius: 8px; }
-        .controls { margin-bottom: 20px; }
-        button { background-color: #4f46e5; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-        button:hover { background-color: #4338ca; }
-    </style>
-</head>
-<body>
-    <div class="controls">
-        <button id="copy-btn">Copy Editable Code</button>
-    </div>
-    <div id="flowchart-container">Rendering...</div>
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: false });
-
-        const mermaidCode = \`${escapedCode}\`;
-        const container = document.getElementById('flowchart-container');
-        
-        document.getElementById('copy-btn').addEventListener('click', () => {
-            navigator.clipboard.writeText(mermaidCode).then(() => {
-                alert('Mermaid code copied to clipboard! You can now paste this into Lucidchart or another editor.');
-            }, () => {
-                alert('Failed to copy code.');
-            });
-        });
-
-        async function render() {
-            try {
-                const { svg } = await mermaid.render('graphDiv', mermaidCode);
-                container.innerHTML = svg;
-            } catch (e) {
-                container.innerHTML = '<div class="error">Error rendering diagram: ' + e.message + '</div>';
-            }
-        }
-        render();
-    </script>
-</body>
-</html>`;
-};
-
 
 // ===================================================================================
 // --- AI Model Adapters ---
 // ===================================================================================
 
-// **ROBUST SOLUTION**: Use the AI to find and extract a section from the BRD.
 const extractSectionWithAI = async (fullBrdText, sectionDescription) => {
     console.log(`Intelligently extracting '${sectionDescription}' section using AI...`);
     const provider = aiConfig.sectionExtractionProvider;
@@ -499,7 +498,7 @@ const extractSectionWithAI = async (fullBrdText, sectionDescription) => {
     const result = await response.json();
     const extractedText = provider === 'gemini' ? result.candidates?.[0]?.content?.parts?.[0]?.text : result.choices?.[0]?.message?.content;
     
-    if (!extractedText || extractedText.trim().length < 20) { // Add a sanity check
+    if (!extractedText || extractedText.trim().length < 10) {
         console.error("AI section extraction returned little or no content. Full BRD was:\n", fullBrdText);
         throw new Error(`AI failed to reliably extract the '${sectionDescription}' section.`);
     }
@@ -552,173 +551,237 @@ ${anonymizedContent}`;
     return result.candidates[0].content.parts[0].text;
 };
 
-const generateBRDWithOpenAIAdapter = async (anonymizedContent) => {
-    const { apiKey, apiBaseUrl, brdGenerationModel } = aiConfig.openai;
+// **NEW**: Generic adapter for OpenAI/OpenRouter to reduce code duplication
+const generateWithChatCompletionAdapter = async (provider, systemPrompt, userPrompt) => {
+    const { apiKey, apiBaseUrl, siteUrl, appName } = aiConfig[provider];
+    let model;
+    // Determine which model to use based on the prompt content
+    if (systemPrompt === BRD_SYSTEM_PROMPT) {
+        model = aiConfig[provider].brdGenerationModel;
+    } else { // Assuming flow generation
+        model = aiConfig[provider].flowGenerationModel;
+    }
+
     const apiUrl = `${apiBaseUrl}/chat/completions`;
-
-    const fullUserPrompt = `HERE IS THE BRD TEMPLATE TO USE FOR YOUR OUTPUT. POPULATE IT BASED ON THE TRANSCRIPT:
-${BRD_MARKDOWN_TEMPLATE}
----
-ANALYZE THE FOLLOWING TRANSCRIPT AND GENERATE THE BRD:
-${anonymizedContent}`;
-
-    const payload = {
-        model: brdGenerationModel,
-        messages: [
-            { role: "system", content: BRD_SYSTEM_PROMPT },
-            { role: "user", content: fullUserPrompt }
-        ]
-    };
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify(payload)
-    });
-    if (!response.ok) throw new Error(`OpenAI BRD generation failed with status ${response.status}`);
-    const result = await response.json();
-    if (!result.choices?.[0]?.message?.content) throw new Error("OpenAI BRD generation returned an empty response.");
-    return result.choices[0].message.content;
-};
-
-// **NEW**: Adapter for generating BRD with OpenRouter
-const generateBRDWithOpenRouterAdapter = async (anonymizedContent) => {
-    const { apiKey, apiBaseUrl, brdGenerationModel, siteUrl, appName } = aiConfig.openrouter;
-    const apiUrl = `${apiBaseUrl}/chat/completions`;
-
-    const fullUserPrompt = `HERE IS THE BRD TEMPLATE TO USE FOR YOUR OUTPUT. POPULATE IT BASED ON THE TRANSCRIPT:
-${BRD_MARKDOWN_TEMPLATE}
----
-ANALYZE THE FOLLOWING TRANSCRIPT AND GENERATE THE BRD:
-${anonymizedContent}`;
-
-    const payload = {
-        model: brdGenerationModel,
-        messages: [
-            { role: "system", content: BRD_SYSTEM_PROMPT },
-            { role: "user", content: fullUserPrompt }
-        ]
-    };
-
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': siteUrl,
-            'X-Title': appName
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) throw new Error(`OpenRouter BRD generation failed with status ${response.status}`);
-    const result = await response.json();
-    if (!result.choices?.[0]?.message?.content) throw new Error("OpenRouter BRD generation returned an empty response.");
-    return result.choices[0].message.content;
-};
-
-// **NEW**: Adapter for generating Flowcharts with OpenRouter
-const generateProcessFlowWithOpenRouterAdapter = async (processDescription) => {
-    const { apiKey, apiBaseUrl, flowGenerationModel, siteUrl, appName } = aiConfig.openrouter;
-    const apiUrl = `${apiBaseUrl}/chat/completions`;
-    
-    const fullPrompt = `${FLOWCHART_PROMPT}\n\n${processDescription}`;
-    
-    const payload = {
-        model: flowGenerationModel,
-        messages: [{ role: "user", content: fullPrompt }]
-    };
-
-    const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'HTTP-Referer': siteUrl,
-            'X-Title': appName
-        },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) throw new Error(`OpenRouter Flow generation failed: ${response.statusText}`);
-    const result = await response.json();
-    return result.choices?.[0]?.message?.content || '';
-};
-
-// **DEFINITIVE FIX**: This function now programmatically cleans the AI's output.
-// **REFACTORED & FIXED**: This function now cleanly handles multiple providers.
-const generateFlowchart = async (processDescription) => {
-    const provider = aiConfig.flowGenerationProvider;
-    console.log(`[LOG] Using provider: ${provider} for flow generation.`);
-    
-    let rawResponse = '';
-    const fullPrompt = `${FLOWCHART_PROMPT}\n\n${processDescription}`;
-
-    // Call the appropriate provider function
-    switch(provider) {
-        case 'openai':
-            const { apiKey: openAIApiKey, apiBaseUrl: openAIApiBaseUrl, flowGenerationModel: openAIFlowModel } = aiConfig.openai;
-            const openAIPayload = { model: openAIFlowModel || 'gpt-4o', messages: [{ role: "user", content: fullPrompt }] };
-            const openAIResponse = await fetch(`${openAIApiBaseUrl}/chat/completions`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openAIApiKey}` }, body: JSON.stringify(openAIPayload) });
-            if (!openAIResponse.ok) throw new Error(`OpenAI Flow generation failed: ${openAIResponse.statusText}`);
-            const openAIResult = await openAIResponse.json();
-            rawResponse = openAIResult.choices?.[0]?.message?.content || '';
-            break;
-        case 'openrouter': // **NEW**
-             rawResponse = await generateProcessFlowWithOpenRouterAdapter(processDescription);
-             break;
-        case 'gemini':
-        default:
-            const { apiKey: geminiApiKey, apiBaseUrl: geminiApiBaseUrl, flowGenerationModel: geminiFlowModel } = aiConfig.gemini;
-            const geminiPayload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
-            const geminiResponse = await fetch(`${geminiApiBaseUrl}/${geminiFlowModel || 'gemini-1.5-flash'}:generateContent?key=${geminiApiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiPayload) });
-            if (!geminiResponse.ok) throw new Error(`Gemini Flow generation failed: ${geminiResponse.statusText}`);
-            const geminiResult = await geminiResponse.json();
-            rawResponse = geminiResult.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            break;
+    const headers = { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+    if (provider === 'openrouter') {
+        headers['HTTP-Referer'] = siteUrl;
+        headers['X-Title'] = appName;
     }
     
-    // First, extract the code block.
-    const mermaidRegex = /```mermaid\n([\s\S]*?)\n```/;
-    let mermaidCode = '';
-    const match = rawResponse.match(mermaidRegex);
+    const messages = [];
+    if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+    messages.push({ role: "user", content: userPrompt });
 
-    if (match && match[1]) {
-        mermaidCode = match[1].trim();
-    } else {
-        const cleanedResponse = rawResponse.replace(/^(.*?)```mermaid/, '').replace(/```(.*)$/, '').trim();
-        if (cleanedResponse.startsWith('graph')) {
-            mermaidCode = cleanedResponse;
+    const payload = { model, messages };
+    const response = await fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+
+    if (!response.ok) throw new Error(`${provider} generation failed with status ${response.statusText}`);
+    const result = await response.json();
+    if (!result.choices?.[0]?.message?.content) throw new Error(`${provider} generation returned an empty response.`);
+    return result.choices[0].message.content;
+};
+
+// ===================================================================================
+// --- Core Application Logic & BPMN Generation ---
+// ===================================================================================
+
+// **QUALITY UPGRADE**: Builds valid BPMN XML from a structured JSON object.
+const buildBpmnXmlFromJson = (processJson) => {
+    const { lanes, nodes } = processJson;
+    const processId = `Process_${uuidv4()}`;
+    const participantId = `Participant_${uuidv4()}`;
+    const collaborationId = `Collaboration_${uuidv4()}`;
+    const diagramId = `BPMNDiagram_${uuidv4()}`;
+    const planeId = `BPMNPlane_${uuidv4()}`;
+
+    let elementsXml = '';
+    let flowsXml = '';
+    let shapesXml = '';
+    let edgesXml = '';
+
+    // Create LaneSet and Lanes
+    const laneSetId = `LaneSet_${uuidv4()}`;
+    let lanesXml = `<bpmn:laneSet id="${laneSetId}">\n`;
+    const laneNodeRefs = {};
+    lanes.forEach(laneName => {
+        const laneId = `Lane_${laneName.replace(/\s/g, '_')}_${uuidv4().slice(0,4)}`;
+        lanesXml += `<bpmn:lane id="${laneId}" name="${laneName}">\n`;
+        laneNodeRefs[laneName] = []; // Prepare to hold nodes for this lane
+    });
+
+    // Sort nodes by ID to ensure process order
+    nodes.sort((a, b) => a.id - b.id);
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+    // Layout variables
+    const laneCoords = {};
+    const X_MARGIN = 150, Y_MARGIN = 120, NODE_WIDTH = 100, NODE_HEIGHT = 80, EVENT_SIZE = 36, GATEWAY_SIZE = 50;
+    let currentX = 200;
+
+    // Generate XML for each node and prepare shape/edge data
+    nodes.forEach(node => {
+        const nodeId = `Node_${node.id}_${node.type}`;
+        node.xmlId = nodeId; // Store the generated ID for referencing
+        laneNodeRefs[node.lane].push(nodeId);
+
+        let outgoingFlows = '';
+        node.outputs.forEach(output => {
+            const flowId = `Flow_${node.id}_${output.target}`;
+            const targetNode = nodeMap.get(output.target);
+            if(targetNode) {
+                const label = output.label ? `name="${output.label}"` : '';
+                flowsXml += `<bpmn:sequenceFlow id="${flowId}" sourceRef="${nodeId}" targetRef="Node_${output.target}_${targetNode.type}" ${label} />\n`;
+                outgoingFlows += `<bpmn:outgoing>${flowId}</bpmn:outgoing>\n`;
+            }
+        });
+
+        const incomingFlows = nodes
+            .filter(n => n.outputs.some(o => o.target === node.id))
+            .map(n => `<bpmn:incoming>Flow_${n.id}_${node.id}</bpmn:incoming>`)
+            .join('\n');
+
+        switch (node.type) {
+            case 'start':
+                elementsXml += `<bpmn:startEvent id="${nodeId}" name="${node.name}">\n${outgoingFlows}</bpmn:startEvent>\n`;
+                break;
+            case 'end':
+                elementsXml += `<bpmn:endEvent id="${nodeId}" name="${node.name}">\n${incomingFlows}</bpmn:endEvent>\n`;
+                break;
+            case 'task':
+                elementsXml += `<bpmn:task id="${nodeId}" name="${node.name}">\n${incomingFlows}${outgoingFlows}</bpmn:task>\n`;
+                break;
+            case 'decision':
+                elementsXml += `<bpmn:exclusiveGateway id="${nodeId}" name="${node.name}">\n${incomingFlows}${outgoingFlows}</bpmn:exclusiveGateway>\n`;
+                break;
         }
-    }
+    });
 
-    if (!mermaidCode) {
-        console.error("[ERROR] Failed to extract any Mermaid code from LLM response:", rawResponse);
-        throw new Error("The AI failed to generate a process flow diagram in the expected format.");
-    }
+    // Finalize lanes XML
+    lanes.forEach(laneName => {
+        laneNodeRefs[laneName].forEach(nodeRef => {
+            lanesXml += `<bpmn:flowNodeRef>${nodeRef}</bpmn:flowNodeRef>\n`;
+        });
+        lanesXml += `</bpmn:lane>\n`;
+    });
+    lanesXml += `</bpmn:laneSet>\n`;
 
-    // **DEFINITIVE CLEANING STEP**:
-    // Split the extracted code into lines and filter out any invalid separator lines.
-    const lines = mermaidCode.split('\n');
-    const cleanedLines = lines.filter(line => {
-        const trimmedLine = line.trim();
-        // A line is invalid if it ONLY contains dashes, underscores, or equals signs,
-        // and does not contain valid Mermaid connection syntax like '-->' or node brackets '[', '{'.
-        return !(/^[\s\-=_]+$/.test(trimmedLine) && !trimmedLine.includes('-->'));
+    // --- Generate Visual Layout ---
+    let yOffset = 100;
+    lanes.forEach((laneName, index) => {
+        const laneHeight = (laneNodeRefs[laneName].length > 0 ? 1 : 0) * Y_MARGIN + 40;
+        laneCoords[laneName] = { y: yOffset, height: laneHeight };
+        yOffset += laneHeight;
     });
     
-    const finalCleanedCode = cleanedLines.join('\n');
+    const nodePositions = {};
+    nodes.forEach(node => {
+        const laneY = laneCoords[node.lane].y;
+        let x, y, width, height;
 
-    if (!finalCleanedCode.startsWith('graph')) {
-         console.error("[ERROR] Final cleaned code is not a valid Mermaid graph:", finalCleanedCode);
-         throw new Error("The AI-generated flowchart was invalid after cleaning.");
-    }
+        switch (node.type) {
+            case 'start':
+            case 'end':
+                width = EVENT_SIZE; height = EVENT_SIZE;
+                break;
+            case 'decision':
+                width = GATEWAY_SIZE; height = GATEWAY_SIZE;
+                break;
+            default: // task
+                width = NODE_WIDTH; height = NODE_HEIGHT;
+        }
+        
+        x = currentX;
+        y = laneY + (Y_MARGIN / 2) - (height / 2);
+        
+        nodePositions[node.id] = { x, y, width, height };
+        
+        shapesXml += `<bpmndi:BPMNShape id="${node.xmlId}_di" bpmnElement="${node.xmlId}">\n` +
+                     `<dc:Bounds x="${x}" y="${y}" width="${width}" height="${height}" />\n` +
+                     `<bpmndi:BPMNLabel><dc:Bounds x="${x}" y="${y+height+5}" width="${width}" height="14" /></bpmndi:BPMNLabel>\n` +
+                     `</bpmndi:BPMNShape>\n`;
+        
+        currentX += NODE_WIDTH + 50; // Move to next column
+    });
+    
+    // Generate edges now that all node positions are known
+    nodes.forEach(node => {
+        node.outputs.forEach(output => {
+            const sourcePos = nodePositions[node.id];
+            const targetPos = nodePositions[output.target];
+            if (sourcePos && targetPos) {
+                const flowId = `Flow_${node.id}_${output.target}`;
+                const sourceX = sourcePos.x + sourcePos.width;
+                const sourceY = sourcePos.y + sourcePos.height / 2;
+                const targetX = targetPos.x;
+                const targetY = targetPos.y + targetPos.height / 2;
+                edgesXml += `<bpmndi:BPMNEdge id="${flowId}_di" bpmnElement="${flowId}">\n` +
+                            `<di:waypoint x="${sourceX}" y="${sourceY}" />\n` +
+                            `<di:waypoint x="${targetX}" y="${targetY}" />\n` +
+                            (output.label ? `<bpmndi:BPMNLabel><dc:Bounds x="${(sourceX + targetX) / 2 - 20}" y="${sourceY - 20}" width="40" height="14" /></bpmndi:BPMNLabel>\n` : '') +
+                            `</bpmndi:BPMNEdge>\n`;
+            }
+        });
+    });
 
-    return finalCleanedCode;
+    // Assemble the final XML
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_${uuidv4()}" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="${collaborationId}">
+    <bpmn:participant id="${participantId}" name="Process" processRef="${processId}" />
+  </bpmn:collaboration>
+  <bpmn:process id="${processId}" isExecutable="false">
+    ${lanesXml}
+    ${elementsXml}
+    ${flowsXml}
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="${diagramId}">
+    <bpmndi:BPMNPlane id="${planeId}" bpmnElement="${collaborationId}">
+      <bpmndi:BPMNShape id="${participantId}_di" bpmnElement="${participantId}" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="${currentX}" height="${yOffset}" />
+      </bpmndi:BPMNShape>
+      ${shapesXml}
+      ${edgesXml}
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
 };
 
-// ===================================================================================
-// --- Core Application Logic ---
-// ===================================================================================
+const generateBpmnFromProcessDescription = async (processDescription, contextSummary) => {
+    const provider = aiConfig.flowGenerationProvider;
+    console.log(`[LOG] Using provider: ${provider} for BPMN JSON generation.`);
+    
+    const fullPrompt = `${PROCESS_TO_JSON_PROMPT}\n\nExecutive Summary: ${contextSummary}\n\nProcess Description: ${processDescription}`;
+
+    let rawResponse;
+    if (provider === 'gemini') {
+        const { apiKey, apiBaseUrl, flowGenerationModel } = aiConfig.gemini;
+        const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
+        const response = await fetch(`${apiBaseUrl}/${flowGenerationModel}:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!response.ok) throw new Error(`Gemini Flow generation failed: ${response.statusText}`);
+        const result = await response.json();
+        rawResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else { // Handles 'openai' and 'openrouter'
+        rawResponse = await generateWithChatCompletionAdapter(provider, null, fullPrompt);
+    }
+    
+    try {
+        // Clean the response to ensure it's valid JSON
+        const cleanedResponse = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+        const processJson = JSON.parse(cleanedResponse);
+        
+        // Validate basic structure
+        if (!processJson.lanes || !processJson.nodes) {
+            throw new Error("Generated JSON is missing 'lanes' or 'nodes' keys.");
+        }
+        
+        return buildBpmnXmlFromJson(processJson);
+    } catch (error) {
+        console.error("[ERROR] Failed to parse JSON from LLM or build BPMN:", error);
+        console.error("Raw response was:", rawResponse);
+        throw new Error("The AI failed to generate a valid process structure.");
+    }
+};
 
 const extractEntities = async (text) => {
     const provider = aiConfig.entityExtractionProvider;
@@ -736,12 +799,17 @@ const extractEntities = async (text) => {
 const generateBRD = async (anonymizedContent) => {
     const provider = aiConfig.brdGenerationProvider;
     console.log(`Using provider: ${provider} for BRD generation.`);
+    
+    const userPrompt = `HERE IS THE BRD TEMPLATE TO USE FOR YOUR OUTPUT. POPULATE IT BASED ON THE TRANSCRIPT:
+${BRD_MARKDOWN_TEMPLATE}
+---
+ANALYZE THE FOLLOWING TRANSCRIPT AND GENERATE THE BRD:
+${anonymizedContent}`;
 
     switch(provider) {
         case 'openai':
-            return await generateBRDWithOpenAIAdapter(anonymizedContent);
         case 'openrouter':
-            return await generateBRDWithOpenRouterAdapter(anonymizedContent);
+            return await generateWithChatCompletionAdapter(provider, BRD_SYSTEM_PROMPT, userPrompt);
         case 'gemini':
         default:
             return await generateBRDWithGeminiAdapter(anonymizedContent);
@@ -771,7 +839,7 @@ const anonymizeText = async (text) => {
 };
 
 // ===================================================================================
-// --- API Endpoints (Refactored to use Caching) ---
+// --- API Endpoints ---
 // ===================================================================================
 
 app.post('/api/generate', upload.array('files', 10), async (req, res) => {
@@ -800,11 +868,15 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
 
         const generatedResults = {};
         let brdText = '';
+        let executiveSummary = '';
 
         const needsBrd = requestedArtifacts.some(art => ['brd', 'asisFlow', 'tobeFlow'].includes(art));
         if (needsBrd) {
             console.log(`[${reqId}] Generating unified BRD from anonymized content...`);
             brdText = await generateBRD(anonymizedCombinedContent);
+            
+            // Extract summary for context
+            executiveSummary = await extractSectionWithAI(brdText, "Executive Summary");
 
             if (requestedArtifacts.includes('brd')) {
                 console.log(`[${reqId}] De-anonymizing BRD for final document...`);
@@ -814,7 +886,7 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
                     finalBRDText = finalBRDText.replace(regex, original);
                 }
                 const docxBuffer = await createDocxBufferFromMarkdown(finalBRDText);
-                generatedResults.brd = { fileName: 'BRD_Explora_Unified.docx', content: docxBuffer.toString('base64'), contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+                generatedResults.brd = { type: 'docx', fileName: 'BRD_Explora_Unified.docx', content: docxBuffer.toString('base64'), contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
             }
         }
 
@@ -822,19 +894,15 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
             console.log(`[${reqId}] Generating As-Is Flow...`);
             const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
             const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
-            const mermaidCode = await generateFlowchart(sanitizedAsIsText);
-            // Generate both the editable .txt and the viewable .html
-            generatedResults.asisFlow = { fileName: 'As_Is_Flow_Editable.txt', content: Buffer.from(mermaidCode).toString('base64'), contentType: 'text/plain' };
-            generatedResults.asisFlowView = { fileName: 'As_Is_Flow_View.html', content: Buffer.from(createFlowchartHtml(mermaidCode)).toString('base64'), contentType: 'text/html' };
+            const bpmnXml = await generateBpmnFromProcessDescription(sanitizedAsIsText, executiveSummary);
+            generatedResults.asisFlow = { type: 'bpmn', fileName: 'As_Is_Flow.bpmn', content: bpmnXml, contentType: 'application/xml' };
         }
         if (requestedArtifacts.includes('tobeFlow') && brdText) {
             console.log(`[${reqId}] Generating To-Be Flow...`);
             const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
             const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
-            const mermaidCode = await generateFlowchart(sanitizedToBeText);
-            // Generate both the editable .txt and the viewable .html
-            generatedResults.tobeFlow = { fileName: 'To_Be_Flow_Editable.txt', content: Buffer.from(mermaidCode).toString('base64'), contentType: 'text/plain' };
-            generatedResults.tobeFlowView = { fileName: 'To_Be_Flow_View.html', content: Buffer.from(createFlowchartHtml(mermaidCode)).toString('base64'), contentType: 'text/html' };
+            const bpmnXml = await generateBpmnFromProcessDescription(sanitizedToBeText, executiveSummary);
+            generatedResults.tobeFlow = { type: 'bpmn', fileName: 'To_Be_Flow.bpmn', content: bpmnXml, contentType: 'application/xml' };
         }
 
         if (requestedArtifacts.includes('anonymized')) {
@@ -852,7 +920,7 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
                 zip.file(result.fileName, result.content);
             }
             const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-            generatedResults.anonymized = { fileName: 'Anonymized_Texts.zip', content: zipBuffer.toString('base64'), contentType: 'application/zip' };
+            generatedResults.anonymized = { type: 'zip', fileName: 'Anonymized_Texts.zip', content: zipBuffer.toString('base64'), contentType: 'application/zip' };
         }
 
         if (requestedArtifacts.includes('mapping')) {
@@ -861,7 +929,7 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
             for (let [code, original] of masterMapping.entries()) {
                 csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
             }
-            generatedResults.mapping = { fileName: 'Redaction_Key.csv', content: Buffer.from(csvContent).toString('base64'), contentType: 'text/csv' };
+            generatedResults.mapping = { type: 'csv', fileName: 'Redaction_Key.csv', content: Buffer.from(csvContent).toString('base64'), contentType: 'text/csv' };
         }
 
         console.log(`[${reqId}] Successfully generated all requested artifacts.`);
