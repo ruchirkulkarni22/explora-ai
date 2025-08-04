@@ -1,6 +1,8 @@
 // server/server.js
 // This version is updated to generate BPMN 2.0 XML for process flows,
 // enabling in-browser editing with bpmn-js on the frontend.
+// QUALITY UPGRADE: Implemented a structured JSON-first approach for BPMN generation
+// to improve diagram accuracy and reliability.
 
 require('dotenv').config();
 const express = require('express');
@@ -214,127 +216,89 @@ const BRD_MARKDOWN_TEMPLATE = `
 | [Approver Name] | [Role] | ____________________ |
 `;
 
-// **NEW**: Prompt to generate BPMN 2.0 XML for process flows.
-const BPMN_XML_PROMPT = `You are a specialist AI that ONLY generates BPMN 2.0 XML code for a process diagram.
-**ABSOLUTE RULES:**
-1.  Your ENTIRE response MUST be a single, valid BPMN 2.0 XML block.
-2.  Start with \`<?xml version="1.0" encoding="UTF-8"?>\`.
-3.  The root element must be \`<bpmn:definitions ...>\` with all necessary namespaces.
-4.  Generate exactly one \`<bpmn:process id="Process_1" isExecutable="false">\`.
-5.  The process should contain one StartEvent, one EndEvent, and a series of Tasks and Gateways to represent the flow.
-6.  Use \`<bpmn:task id="..." name="...">\` for process steps.
-7.  Use \`<bpmn:exclusiveGateway id="..." name="...">\` for decisions.
-8.  Use \`<bpmn:sequenceFlow id="..." sourceRef="..." targetRef="..." name="...">\` to connect elements. The 'name' attribute is for gateway conditions (e.g., "Yes", "No").
-9.  Include the \`<bpmndi:BPMNDiagram>\` section with \`<bpmndi:BPMNPlane>\` and corresponding \`<bpmndi:BPMNShape>\` and \`<bpmndi:BPMNEdge>\` elements to define the visual layout.
-10. DO NOT add ANY comments, explanations, or text outside the XML structure.
-11. Generate plausible x, y coordinates for the layout. Start event should be around x=170, y=100.
+// **QUALITY UPGRADE**: New prompt to extract a structured JSON from process text.
+const PROCESS_TO_JSON_PROMPT = `You are a system that translates natural language process descriptions into a structured JSON format suitable for BPMN diagram generation.
 
-**EXAMPLE OF A PERFECT RESPONSE:**
-\`\`\`xml
-<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
-  <bpmn:process id="Process_1" isExecutable="false">
-    <bpmn:startEvent id="StartEvent_1" name="Request Received">
-      <bpmn:outgoing>Flow_1</bpmn:outgoing>
-    </bpmn:startEvent>
-    <bpmn:task id="Task_1" name="Review Request">
-      <bpmn:incoming>Flow_1</bpmn:incoming>
-      <bpmn:outgoing>Flow_2</bpmn:outgoing>
-    </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1" />
-    <bpmn:exclusiveGateway id="Gateway_1" name="Is Approved?">
-      <bpmn:incoming>Flow_2</bpmn:incoming>
-      <bpmn:outgoing>Flow_Yes</bpmn:outgoing>
-      <bpmn:outgoing>Flow_No</bpmn:outgoing>
-    </bpmn:exclusiveGateway>
-    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="Gateway_1" />
-    <bpmn:task id="Task_Approved" name="Process Order">
-      <bpmn:incoming>Flow_Yes</bpmn:incoming>
-      <bpmn:outgoing>Flow_End_1</bpmn:outgoing>
-    </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_Yes" name="Yes" sourceRef="Gateway_1" targetRef="Task_Approved" />
-    <bpmn:endEvent id="EndEvent_1">
-      <bpmn:incoming>Flow_End_1</bpmn:incoming>
-    </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_End_1" sourceRef="Task_Approved" targetRef="EndEvent_1" />
-    <bpmn:task id="Task_Rejected" name="Notify User">
-      <bpmn:incoming>Flow_No</bpmn:incoming>
-      <bpmn:outgoing>Flow_End_2</bpmn:outgoing>
-    </bpmn:task>
-    <bpmn:sequenceFlow id="Flow_No" name="No" sourceRef="Gateway_1" targetRef="Task_Rejected" />
-    <bpmn:endEvent id="EndEvent_2">
-      <bpmn:incoming>Flow_End_2</bpmn:incoming>
-    </bpmn:endEvent>
-    <bpmn:sequenceFlow id="Flow_End_2" sourceRef="Task_Rejected" targetRef="EndEvent_2" />
-  </bpmn:process>
-  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
-    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
-      <bpmndi:BPMNShape id="StartEvent_1_di" bpmnElement="StartEvent_1">
-        <dc:Bounds x="179" y="102" width="36" height="36" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="159" y="145" width="77" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_1_di" bpmnElement="Task_1">
-        <dc:Bounds x="270" y="80" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1">
-        <di:waypoint x="215" y="120" />
-        <di:waypoint x="270" y="120" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Gateway_1_di" bpmnElement="Gateway_1" isMarkerVisible="true">
-        <dc:Bounds x="425" y="95" width="50" height="50" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="416" y="65" width="68" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2">
-        <di:waypoint x="370" y="120" />
-        <di:waypoint x="425" y="120" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Task_Approved_di" bpmnElement="Task_Approved">
-        <dc:Bounds x="530" y="80" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_Yes_di" bpmnElement="Flow_Yes">
-        <di:waypoint x="475" y="120" />
-        <di:waypoint x="530" y="120" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="496" y="102" width="18" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="EndEvent_1_di" bpmnElement="EndEvent_1">
-        <dc:Bounds x="682" y="102" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_End_1_di" bpmnElement="Flow_End_1">
-        <di:waypoint x="630" y="120" />
-        <di:waypoint x="682" y="120" />
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="Task_Rejected_di" bpmnElement="Task_Rejected">
-        <dc:Bounds x="530" y="200" width="100" height="80" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_No_di" bpmnElement="Flow_No">
-        <di:waypoint x="450" y="145" />
-        <di:waypoint x="450" y="240" />
-        <di:waypoint x="530" y="240" />
-        <bpmndi:BPMNLabel>
-          <dc:Bounds x="458" y="190" width="15" height="14" />
-        </bpmndi:BPMNLabel>
-      </bpmndi:BPMNEdge>
-      <bpmndi:BPMNShape id="EndEvent_2_di" bpmnElement="EndEvent_2">
-        <dc:Bounds x="682" y="222" width="36" height="36" />
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_End_2_di" bpmnElement="Flow_End_2">
-        <di:waypoint x="630" y="240" />
-        <di:waypoint x="682" y="240" />
-      </bpmndi:BPMNEdge>
-    </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
-</bpmn:definitions>
-\`\`\`
+**TASK:** Analyze the provided process description and executive summary. Your entire output must be a single JSON object.
 
-**YOUR TASK:**
-Convert the following process description into BPMN 2.0 XML, following all rules strictly and precisely.
+**JSON STRUCTURE:**
+The JSON object must have two top-level keys: "lanes" and "nodes".
+
+1.  **"lanes"**: An array of strings representing the actors or systems in the process (e.g., "Customer", "Sales System", "Manager"). Identify these from the text. If no specific roles are mentioned, use a default lane like "System".
+
+2.  **"nodes"**: An array of objects, where each object represents a step, decision, or event in the process. Each node must have the following properties:
+    * **"id"**: A unique integer identifier for the node (e.g., 1, 2, 3).
+    * **"name"**: A concise, verb-first label for the node (e.g., "Submit Application", "Is application complete?", "Process Approved").
+    * **"type"**: The type of BPMN element. Must be one of: "start", "end", "task", "decision".
+    * **"lane"**: The name of the lane (from the "lanes" array) that this node belongs to.
+    * **"outputs"**: An array of objects describing the connections from this node to others. Each connection object must have:
+        * **"target"**: The integer "id" of the node it connects to.
+        * **"label"**: (Optional) A label for the connection, ONLY for outputs from a "decision" node (e.g., "Yes", "No", "Needs More Info").
+
+**RULES:**
+* The first node must be of type "start".
+* All process paths must eventually lead to a node of type "end".
+* "decision" nodes must have at least two outputs, each with a "label".
+* "task", "start", and "end" nodes should have exactly one output, with no "label".
+* Ensure all node "id"s referenced in "outputs" exist.
+* The entire response must be ONLY the JSON object, starting with \`{\` and ending with \`}\`. Do not wrap it in markdown.
+
+**EXAMPLE:**
+Process Description: "The customer submits an order. The system checks if the item is in stock. If it is, the system processes the payment. If not, it notifies the customer that the item is backordered. The process ends after payment or notification."
+
+**PERFECT JSON OUTPUT:**
+{
+  "lanes": ["Customer", "System"],
+  "nodes": [
+    {
+      "id": 1,
+      "name": "Order Submitted",
+      "type": "start",
+      "lane": "Customer",
+      "outputs": [{ "target": 2 }]
+    },
+    {
+      "id": 2,
+      "name": "Submit Order",
+      "type": "task",
+      "lane": "Customer",
+      "outputs": [{ "target": 3 }]
+    },
+    {
+      "id": 3,
+      "name": "Is item in stock?",
+      "type": "decision",
+      "lane": "System",
+      "outputs": [
+        { "target": 4, "label": "Yes" },
+        { "target": 5, "label": "No" }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Process Payment",
+      "type": "task",
+      "lane": "System",
+      "outputs": [{ "target": 6 }]
+    },
+    {
+      "id": 5,
+      "name": "Notify Customer of Backorder",
+      "type": "task",
+      "lane": "System",
+      "outputs": [{ "target": 6 }]
+    },
+    {
+      "id": 6,
+      "name": "Process Complete",
+      "type": "end",
+      "lane": "System",
+      "outputs": []
+    }
+  ]
+}
 `;
+
 
 // Prompt to intelligently extract a section from a document
 const SECTION_EXTRACTOR_PROMPT = `You are an expert text analysis AI. Your task is to extract a specific section from the provided document.
@@ -349,13 +313,13 @@ The section to extract is: `;
 const aiConfig = {
     entityExtractionProvider: 'spacy',
     brdGenerationProvider: 'gemini',
-    flowGenerationProvider: 'gemini', // This now generates BPMN
+    flowGenerationProvider: 'gemini',
     sectionExtractionProvider: 'gemini',
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
-        brdGenerationModel: 'gemini-1.5-flash',
-        flowGenerationModel: 'gemini-1.5-flash', // Model updated to one that handles XML well
+        brdGenerationModel: 'gemini-2.5-flash',
+        flowGenerationModel: 'gemini-2.5-flash',
         sectionExtractionModel: 'gemini-1.5-flash',
         apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
     },
@@ -368,9 +332,9 @@ const aiConfig = {
     },
     openrouter: {
         apiKey: process.env.OPENROUTER_API_KEY,
-        brdGenerationModel: 'deepseek/deepseek-coder',
-        flowGenerationModel: 'anthropic/claude-3-haiku', // Good at XML
-        sectionExtractionModel: 'anthropic/claude-3-haiku',
+        brdGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
+        flowGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
+        sectionExtractionModel: 'deepseek/deepseek-chat-v3-0324:free',
         apiBaseUrl: 'https://openrouter.ai/api/v1',
         siteUrl: 'http://localhost:3000',
         appName: 'Explora'
@@ -618,15 +582,178 @@ const generateWithChatCompletionAdapter = async (provider, systemPrompt, userPro
     return result.choices[0].message.content;
 };
 
+// ===================================================================================
+// --- Core Application Logic & BPMN Generation ---
+// ===================================================================================
 
-// **UPDATED**: This function now generates BPMN XML.
-const generateBpmnXml = async (processDescription) => {
-    const provider = aiConfig.flowGenerationProvider;
-    console.log(`[LOG] Using provider: ${provider} for BPMN generation.`);
+// **QUALITY UPGRADE**: Builds valid BPMN XML from a structured JSON object.
+const buildBpmnXmlFromJson = (processJson) => {
+    const { lanes, nodes } = processJson;
+    const processId = `Process_${uuidv4()}`;
+    const participantId = `Participant_${uuidv4()}`;
+    const collaborationId = `Collaboration_${uuidv4()}`;
+    const diagramId = `BPMNDiagram_${uuidv4()}`;
+    const planeId = `BPMNPlane_${uuidv4()}`;
+
+    let elementsXml = '';
+    let flowsXml = '';
+    let shapesXml = '';
+    let edgesXml = '';
+
+    // Create LaneSet and Lanes
+    const laneSetId = `LaneSet_${uuidv4()}`;
+    let lanesXml = `<bpmn:laneSet id="${laneSetId}">\n`;
+    const laneNodeRefs = {};
+    lanes.forEach(laneName => {
+        const laneId = `Lane_${laneName.replace(/\s/g, '_')}_${uuidv4().slice(0,4)}`;
+        lanesXml += `<bpmn:lane id="${laneId}" name="${laneName}">\n`;
+        laneNodeRefs[laneName] = []; // Prepare to hold nodes for this lane
+    });
+
+    // Sort nodes by ID to ensure process order
+    nodes.sort((a, b) => a.id - b.id);
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+    // Layout variables
+    const laneCoords = {};
+    const X_MARGIN = 150, Y_MARGIN = 120, NODE_WIDTH = 100, NODE_HEIGHT = 80, EVENT_SIZE = 36, GATEWAY_SIZE = 50;
+    let currentX = 200;
+
+    // Generate XML for each node and prepare shape/edge data
+    nodes.forEach(node => {
+        const nodeId = `Node_${node.id}_${node.type}`;
+        node.xmlId = nodeId; // Store the generated ID for referencing
+        laneNodeRefs[node.lane].push(nodeId);
+
+        let outgoingFlows = '';
+        node.outputs.forEach(output => {
+            const flowId = `Flow_${node.id}_${output.target}`;
+            const targetNode = nodeMap.get(output.target);
+            if(targetNode) {
+                const label = output.label ? `name="${output.label}"` : '';
+                flowsXml += `<bpmn:sequenceFlow id="${flowId}" sourceRef="${nodeId}" targetRef="Node_${output.target}_${targetNode.type}" ${label} />\n`;
+                outgoingFlows += `<bpmn:outgoing>${flowId}</bpmn:outgoing>\n`;
+            }
+        });
+
+        const incomingFlows = nodes
+            .filter(n => n.outputs.some(o => o.target === node.id))
+            .map(n => `<bpmn:incoming>Flow_${n.id}_${node.id}</bpmn:incoming>`)
+            .join('\n');
+
+        switch (node.type) {
+            case 'start':
+                elementsXml += `<bpmn:startEvent id="${nodeId}" name="${node.name}">\n${outgoingFlows}</bpmn:startEvent>\n`;
+                break;
+            case 'end':
+                elementsXml += `<bpmn:endEvent id="${nodeId}" name="${node.name}">\n${incomingFlows}</bpmn:endEvent>\n`;
+                break;
+            case 'task':
+                elementsXml += `<bpmn:task id="${nodeId}" name="${node.name}">\n${incomingFlows}${outgoingFlows}</bpmn:task>\n`;
+                break;
+            case 'decision':
+                elementsXml += `<bpmn:exclusiveGateway id="${nodeId}" name="${node.name}">\n${incomingFlows}${outgoingFlows}</bpmn:exclusiveGateway>\n`;
+                break;
+        }
+    });
+
+    // Finalize lanes XML
+    lanes.forEach(laneName => {
+        laneNodeRefs[laneName].forEach(nodeRef => {
+            lanesXml += `<bpmn:flowNodeRef>${nodeRef}</bpmn:flowNodeRef>\n`;
+        });
+        lanesXml += `</bpmn:lane>\n`;
+    });
+    lanesXml += `</bpmn:laneSet>\n`;
+
+    // --- Generate Visual Layout ---
+    let yOffset = 100;
+    lanes.forEach((laneName, index) => {
+        const laneHeight = (laneNodeRefs[laneName].length > 0 ? 1 : 0) * Y_MARGIN + 40;
+        laneCoords[laneName] = { y: yOffset, height: laneHeight };
+        yOffset += laneHeight;
+    });
     
-    let rawResponse = '';
-    const fullPrompt = `${BPMN_XML_PROMPT}\n\n${processDescription}`;
+    const nodePositions = {};
+    nodes.forEach(node => {
+        const laneY = laneCoords[node.lane].y;
+        let x, y, width, height;
 
+        switch (node.type) {
+            case 'start':
+            case 'end':
+                width = EVENT_SIZE; height = EVENT_SIZE;
+                break;
+            case 'decision':
+                width = GATEWAY_SIZE; height = GATEWAY_SIZE;
+                break;
+            default: // task
+                width = NODE_WIDTH; height = NODE_HEIGHT;
+        }
+        
+        x = currentX;
+        y = laneY + (Y_MARGIN / 2) - (height / 2);
+        
+        nodePositions[node.id] = { x, y, width, height };
+        
+        shapesXml += `<bpmndi:BPMNShape id="${node.xmlId}_di" bpmnElement="${node.xmlId}">\n` +
+                     `<dc:Bounds x="${x}" y="${y}" width="${width}" height="${height}" />\n` +
+                     `<bpmndi:BPMNLabel><dc:Bounds x="${x}" y="${y+height+5}" width="${width}" height="14" /></bpmndi:BPMNLabel>\n` +
+                     `</bpmndi:BPMNShape>\n`;
+        
+        currentX += NODE_WIDTH + 50; // Move to next column
+    });
+    
+    // Generate edges now that all node positions are known
+    nodes.forEach(node => {
+        node.outputs.forEach(output => {
+            const sourcePos = nodePositions[node.id];
+            const targetPos = nodePositions[output.target];
+            if (sourcePos && targetPos) {
+                const flowId = `Flow_${node.id}_${output.target}`;
+                const sourceX = sourcePos.x + sourcePos.width;
+                const sourceY = sourcePos.y + sourcePos.height / 2;
+                const targetX = targetPos.x;
+                const targetY = targetPos.y + targetPos.height / 2;
+                edgesXml += `<bpmndi:BPMNEdge id="${flowId}_di" bpmnElement="${flowId}">\n` +
+                            `<di:waypoint x="${sourceX}" y="${sourceY}" />\n` +
+                            `<di:waypoint x="${targetX}" y="${targetY}" />\n` +
+                            (output.label ? `<bpmndi:BPMNLabel><dc:Bounds x="${(sourceX + targetX) / 2 - 20}" y="${sourceY - 20}" width="40" height="14" /></bpmndi:BPMNLabel>\n` : '') +
+                            `</bpmndi:BPMNEdge>\n`;
+            }
+        });
+    });
+
+    // Assemble the final XML
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_${uuidv4()}" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="${collaborationId}">
+    <bpmn:participant id="${participantId}" name="Process" processRef="${processId}" />
+  </bpmn:collaboration>
+  <bpmn:process id="${processId}" isExecutable="false">
+    ${lanesXml}
+    ${elementsXml}
+    ${flowsXml}
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="${diagramId}">
+    <bpmndi:BPMNPlane id="${planeId}" bpmnElement="${collaborationId}">
+      <bpmndi:BPMNShape id="${participantId}_di" bpmnElement="${participantId}" isHorizontal="true">
+        <dc:Bounds x="150" y="80" width="${currentX}" height="${yOffset}" />
+      </bpmndi:BPMNShape>
+      ${shapesXml}
+      ${edgesXml}
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>`;
+};
+
+const generateBpmnFromProcessDescription = async (processDescription, contextSummary) => {
+    const provider = aiConfig.flowGenerationProvider;
+    console.log(`[LOG] Using provider: ${provider} for BPMN JSON generation.`);
+    
+    const fullPrompt = `${PROCESS_TO_JSON_PROMPT}\n\nExecutive Summary: ${contextSummary}\n\nProcess Description: ${processDescription}`;
+
+    let rawResponse;
     if (provider === 'gemini') {
         const { apiKey, apiBaseUrl, flowGenerationModel } = aiConfig.gemini;
         const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
@@ -638,26 +765,23 @@ const generateBpmnXml = async (processDescription) => {
         rawResponse = await generateWithChatCompletionAdapter(provider, null, fullPrompt);
     }
     
-    // Extract the XML block, robustly handling optional ```xml wrappers.
-    const xmlRegex = /```xml\n([\s\S]*?)\n```|^(<\?xml[\s\S]*<\/bpmn:definitions>)/m;
-    const match = rawResponse.match(xmlRegex);
-    
-    let bpmnXml = '';
-    if (match) {
-        bpmnXml = match[1] || match[2]; // Use the content of the first or second capturing group
+    try {
+        // Clean the response to ensure it's valid JSON
+        const cleanedResponse = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
+        const processJson = JSON.parse(cleanedResponse);
+        
+        // Validate basic structure
+        if (!processJson.lanes || !processJson.nodes) {
+            throw new Error("Generated JSON is missing 'lanes' or 'nodes' keys.");
+        }
+        
+        return buildBpmnXmlFromJson(processJson);
+    } catch (error) {
+        console.error("[ERROR] Failed to parse JSON from LLM or build BPMN:", error);
+        console.error("Raw response was:", rawResponse);
+        throw new Error("The AI failed to generate a valid process structure.");
     }
-
-    if (!bpmnXml || !bpmnXml.trim().startsWith('<?xml')) {
-        console.error("[ERROR] Failed to extract valid BPMN XML from LLM response:", rawResponse);
-        throw new Error("The AI failed to generate a process flow diagram in the expected BPMN XML format.");
-    }
-
-    return bpmnXml.trim();
 };
-
-// ===================================================================================
-// --- Core Application Logic ---
-// ===================================================================================
 
 const extractEntities = async (text) => {
     const provider = aiConfig.entityExtractionProvider;
@@ -744,11 +868,15 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
 
         const generatedResults = {};
         let brdText = '';
+        let executiveSummary = '';
 
         const needsBrd = requestedArtifacts.some(art => ['brd', 'asisFlow', 'tobeFlow'].includes(art));
         if (needsBrd) {
             console.log(`[${reqId}] Generating unified BRD from anonymized content...`);
             brdText = await generateBRD(anonymizedCombinedContent);
+            
+            // Extract summary for context
+            executiveSummary = await extractSectionWithAI(brdText, "Executive Summary");
 
             if (requestedArtifacts.includes('brd')) {
                 console.log(`[${reqId}] De-anonymizing BRD for final document...`);
@@ -766,14 +894,14 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
             console.log(`[${reqId}] Generating As-Is Flow...`);
             const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
             const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
-            const bpmnXml = await generateBpmnXml(sanitizedAsIsText);
+            const bpmnXml = await generateBpmnFromProcessDescription(sanitizedAsIsText, executiveSummary);
             generatedResults.asisFlow = { type: 'bpmn', fileName: 'As_Is_Flow.bpmn', content: bpmnXml, contentType: 'application/xml' };
         }
         if (requestedArtifacts.includes('tobeFlow') && brdText) {
             console.log(`[${reqId}] Generating To-Be Flow...`);
             const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
             const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
-            const bpmnXml = await generateBpmnXml(sanitizedToBeText);
+            const bpmnXml = await generateBpmnFromProcessDescription(sanitizedToBeText, executiveSummary);
             generatedResults.tobeFlow = { type: 'bpmn', fileName: 'To_Be_Flow.bpmn', content: bpmnXml, contentType: 'application/xml' };
         }
 
