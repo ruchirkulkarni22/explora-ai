@@ -1,8 +1,8 @@
 // server/server.js
 // This version is updated to generate BPMN 2.0 XML for process flows,
 // enabling in-browser editing with bpmn-js on the frontend.
-// QUALITY UPGRADE: Implemented a structured JSON-first approach for BPMN generation
-// to improve diagram accuracy and reliability.
+// QUALITY UPGRADE: Implemented a structured JSON-first approach and a more advanced
+// layout algorithm for cleaner, more professional diagrams.
 
 require('dotenv').config();
 const express = require('express');
@@ -216,7 +216,7 @@ const BRD_MARKDOWN_TEMPLATE = `
 | [Approver Name] | [Role] | ____________________ |
 `;
 
-// **QUALITY UPGRADE**: New prompt to extract a structured JSON from process text.
+// **QUALITY UPGRADE**: Prompt enhanced for more professional language and stricter rules.
 const PROCESS_TO_JSON_PROMPT = `You are a system that translates natural language process descriptions into a structured JSON format suitable for BPMN diagram generation.
 
 **TASK:** Analyze the provided process description and executive summary. Your entire output must be a single JSON object.
@@ -227,21 +227,21 @@ The JSON object must have two top-level keys: "lanes" and "nodes".
 1.  **"lanes"**: An array of strings representing the actors or systems in the process (e.g., "Customer", "Sales System", "Manager"). Identify these from the text. If no specific roles are mentioned, use a default lane like "System".
 
 2.  **"nodes"**: An array of objects, where each object represents a step, decision, or event in the process. Each node must have the following properties:
-    * **"id"**: A unique integer identifier for the node (e.g., 1, 2, 3).
-    * **"name"**: A concise, verb-first label for the node (e.g., "Submit Application", "Is application complete?", "Process Approved").
+    * **"id"**: A unique integer identifier for the node (e.g., 1, 2, 3), starting from 1.
+    * **"name"**: A concise, professional, verb-first label for the node (e.g., "Submit Application", "Is application complete?", "Process Approved"). Use professional business terminology.
     * **"type"**: The type of BPMN element. Must be one of: "start", "end", "task", "decision".
     * **"lane"**: The name of the lane (from the "lanes" array) that this node belongs to.
     * **"outputs"**: An array of objects describing the connections from this node to others. Each connection object must have:
         * **"target"**: The integer "id" of the node it connects to.
-        * **"label"**: (Optional) A label for the connection, ONLY for outputs from a "decision" node (e.g., "Yes", "No", "Needs More Info").
+        * **"label"**: (Optional) A concise label for the connection, ONLY for outputs from a "decision" node (e.g., "Yes", "No", "Approved", "Rejected").
 
-**RULES:**
-* The first node must be of type "start".
-* All process paths must eventually lead to a node of type "end".
-* "decision" nodes must have at least two outputs, each with a "label".
-* "task", "start", and "end" nodes should have exactly one output, with no "label".
-* Ensure all node "id"s referenced in "outputs" exist.
-* The entire response must be ONLY the JSON object, starting with \`{\` and ending with \`}\`. Do not wrap it in markdown.
+**RULES & GUIDELINES:**
+* **Professional Language**: Node names must be professional and concise. Start tasks with a verb.
+* **Logical Flow**: The first node must be of type "start". All process paths must eventually lead to one or more "end" nodes.
+* **Decision Integrity**: "decision" nodes must have at least two outputs, and each output must have a "label".
+* **Task/Event Integrity**: "task", "start", and "end" nodes should have exactly one output, with no "label", unless they are the final node.
+* **Valid Connections**: Ensure all node "id"s referenced in "outputs" exist. The process must be a valid, connected graph.
+* **JSON Only**: The entire response must be ONLY the JSON object, starting with \`{\` and ending with \`}\`. Do not wrap it in markdown or add explanations.
 
 **EXAMPLE:**
 Process Description: "The customer submits an order. The system checks if the item is in stock. If it is, the system processes the payment. If not, it notifies the customer that the item is backordered. The process ends after payment or notification."
@@ -266,12 +266,12 @@ Process Description: "The customer submits an order. The system checks if the it
     },
     {
       "id": 3,
-      "name": "Is item in stock?",
+      "name": "Check Stock Availability",
       "type": "decision",
       "lane": "System",
       "outputs": [
-        { "target": 4, "label": "Yes" },
-        { "target": 5, "label": "No" }
+        { "target": 4, "label": "In Stock" },
+        { "target": 5, "label": "Out of Stock" }
       ]
     },
     {
@@ -318,8 +318,8 @@ const aiConfig = {
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
-        brdGenerationModel: 'gemini-1.5-flash',
-        flowGenerationModel: 'gemini-1.5-flash',
+        brdGenerationModel: 'gemini-2.5-flash',
+        flowGenerationModel: 'gemini-2.5-flash',
         sectionExtractionModel: 'gemini-1.5-flash',
         apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
     },
@@ -586,160 +586,160 @@ const generateWithChatCompletionAdapter = async (provider, systemPrompt, userPro
 // --- Core Application Logic & BPMN Generation ---
 // ===================================================================================
 
-// **QUALITY UPGRADE**: Builds valid BPMN XML from a structured JSON object.
+// **QUALITY UPGRADE**: Builds valid BPMN XML from a structured JSON object using an advanced layout algorithm.
 const buildBpmnXmlFromJson = (processJson) => {
     const { lanes, nodes } = processJson;
+    const nodeMap = new Map(nodes.map(n => [n.id, { ...n, children: [], parents: [] }]));
+
+    // Build graph relationships
+    nodes.forEach(node => {
+        node.outputs.forEach(output => {
+            if (nodeMap.has(output.target) && nodeMap.has(node.id)) {
+                nodeMap.get(node.id).children.push(nodeMap.get(output.target));
+                nodeMap.get(output.target).parents.push(nodeMap.get(node.id));
+            }
+        });
+    });
+
+    // 1. Calculate Columns (horizontal layers)
+    const nodeColumns = {};
+    let queue = nodes.filter(n => n.type === 'start').map(n => ({ id: n.id, col: 0 }));
+    let visited = new Set(queue.map(q => q.id));
+
+    while (queue.length > 0) {
+        const { id, col } = queue.shift();
+        nodeColumns[id] = Math.max(nodeColumns[id] || 0, col);
+        const node = nodeMap.get(id);
+        node.children.forEach(child => {
+            if (!visited.has(child.id)) {
+                queue.push({ id: child.id, col: col + 1 });
+                visited.add(child.id);
+            }
+        });
+    }
+
+    // Group nodes by column
+    const columns = [];
+    for (const nodeId in nodeColumns) {
+        const col = nodeColumns[nodeId];
+        if (!columns[col]) columns[col] = [];
+        columns[col].push(nodeMap.get(parseInt(nodeId)));
+    }
+
+    // 2. Calculate Positions
+    const positions = {};
+    const X_STEP = 180, Y_STEP = 120, X_START = 250, Y_START = 150;
+    const EVENT_SIZE = 36, GATEWAY_SIZE = 50, TASK_WIDTH = 100, TASK_HEIGHT = 80;
+
+    columns.forEach((colNodes, colIndex) => {
+        colNodes.forEach((node, rowIndex) => {
+            let width, height;
+            switch (node.type) {
+                case 'start': case 'end':
+                    width = height = EVENT_SIZE; break;
+                case 'decision':
+                    width = height = GATEWAY_SIZE; break;
+                default:
+                    width = TASK_WIDTH; height = TASK_HEIGHT;
+            }
+            positions[node.id] = {
+                x: X_START + colIndex * X_STEP,
+                y: Y_START + rowIndex * Y_STEP,
+                width,
+                height
+            };
+        });
+    });
+
+    // 3. Generate XML
     const processId = `Process_${uuidv4()}`;
-    const participantId = `Participant_${uuidv4()}`;
     const collaborationId = `Collaboration_${uuidv4()}`;
     const diagramId = `BPMNDiagram_${uuidv4()}`;
     const planeId = `BPMNPlane_${uuidv4()}`;
-
+    
     let elementsXml = '';
     let flowsXml = '';
     let shapesXml = '';
     let edgesXml = '';
 
-    // Create LaneSet and Lanes
-    const laneSetId = `LaneSet_${uuidv4()}`;
-    let lanesXml = `<bpmn:laneSet id="${laneSetId}">\n`;
-    const laneNodeRefs = {};
-    lanes.forEach(laneName => {
-        const laneId = `Lane_${laneName.replace(/\s/g, '_')}_${uuidv4().slice(0,4)}`;
-        lanesXml += `<bpmn:lane id="${laneId}" name="${laneName}">\n`;
-        laneNodeRefs[laneName] = []; // Prepare to hold nodes for this lane
-    });
-
-    // Sort nodes by ID to ensure process order
-    nodes.sort((a, b) => a.id - b.id);
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-    // Layout variables
-    const laneCoords = {};
-    const X_MARGIN = 150, Y_MARGIN = 120, NODE_WIDTH = 100, NODE_HEIGHT = 80, EVENT_SIZE = 36, GATEWAY_SIZE = 50;
-    let currentX = 200;
-
-    // Generate XML for each node and prepare shape/edge data
     nodes.forEach(node => {
-        const nodeId = `Node_${node.id}_${node.type}`;
-        node.xmlId = nodeId; // Store the generated ID for referencing
-        laneNodeRefs[node.lane].push(nodeId);
+        const xmlId = `Node_${node.id}`;
+        node.xmlId = xmlId;
+        const pos = positions[node.id];
 
         let outgoingFlows = '';
         node.outputs.forEach(output => {
             const flowId = `Flow_${node.id}_${output.target}`;
-            const targetNode = nodeMap.get(output.target);
-            if(targetNode) {
-                const label = output.label ? `name="${output.label}"` : '';
-                flowsXml += `<bpmn:sequenceFlow id="${flowId}" sourceRef="${nodeId}" targetRef="Node_${output.target}_${targetNode.type}" ${label} />\n`;
-                outgoingFlows += `<bpmn:outgoing>${flowId}</bpmn:outgoing>\n`;
-            }
+            const targetXmlId = `Node_${output.target}`;
+            const label = output.label ? `name="${output.label}"` : '';
+            flowsXml += `<bpmn:sequenceFlow id="${flowId}" sourceRef="${xmlId}" targetRef="${targetXmlId}" ${label} />\n`;
+            outgoingFlows += `<bpmn:outgoing>${flowId}</bpmn:outgoing>\n`;
         });
-
-        const incomingFlows = nodes
-            .filter(n => n.outputs.some(o => o.target === node.id))
-            .map(n => `<bpmn:incoming>Flow_${n.id}_${node.id}</bpmn:incoming>`)
-            .join('\n');
-
+        
+        const incomingFlows = nodeMap.get(node.id).parents.map(p => `<bpmn:incoming>Flow_${p.id}_${node.id}</bpmn:incoming>`).join('\n');
+        
         switch (node.type) {
             case 'start':
-                elementsXml += `<bpmn:startEvent id="${nodeId}" name="${node.name}">\n${outgoingFlows}</bpmn:startEvent>\n`;
+                elementsXml += `<bpmn:startEvent id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:startEvent>\n`;
                 break;
             case 'end':
-                elementsXml += `<bpmn:endEvent id="${nodeId}" name="${node.name}">\n${incomingFlows}</bpmn:endEvent>\n`;
+                elementsXml += `<bpmn:endEvent id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:endEvent>\n`;
                 break;
             case 'task':
-                elementsXml += `<bpmn:task id="${nodeId}" name="${node.name}">\n${incomingFlows}${outgoingFlows}</bpmn:task>\n`;
+                elementsXml += `<bpmn:task id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:task>\n`;
                 break;
             case 'decision':
-                elementsXml += `<bpmn:exclusiveGateway id="${nodeId}" name="${node.name}">\n${incomingFlows}${outgoingFlows}</bpmn:exclusiveGateway>\n`;
+                elementsXml += `<bpmn:exclusiveGateway id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:exclusiveGateway>\n`;
                 break;
         }
-    });
 
-    // Finalize lanes XML
-    lanes.forEach(laneName => {
-        laneNodeRefs[laneName].forEach(nodeRef => {
-            lanesXml += `<bpmn:flowNodeRef>${nodeRef}</bpmn:flowNodeRef>\n`;
-        });
-        lanesXml += `</bpmn:lane>\n`;
-    });
-    lanesXml += `</bpmn:laneSet>\n`;
-
-    // --- Generate Visual Layout ---
-    let yOffset = 100;
-    lanes.forEach((laneName, index) => {
-        const laneHeight = (laneNodeRefs[laneName].length > 0 ? 1 : 0) * Y_MARGIN + 40;
-        laneCoords[laneName] = { y: yOffset, height: laneHeight };
-        yOffset += laneHeight;
-    });
-    
-    const nodePositions = {};
-    nodes.forEach(node => {
-        const laneY = laneCoords[node.lane].y;
-        let x, y, width, height;
-
-        switch (node.type) {
-            case 'start':
-            case 'end':
-                width = EVENT_SIZE; height = EVENT_SIZE;
-                break;
-            case 'decision':
-                width = GATEWAY_SIZE; height = GATEWAY_SIZE;
-                break;
-            default: // task
-                width = NODE_WIDTH; height = NODE_HEIGHT;
-        }
-        
-        x = currentX;
-        y = laneY + (Y_MARGIN / 2) - (height / 2);
-        
-        nodePositions[node.id] = { x, y, width, height };
-        
-        shapesXml += `<bpmndi:BPMNShape id="${node.xmlId}_di" bpmnElement="${node.xmlId}">\n` +
-                     `<dc:Bounds x="${x}" y="${y}" width="${width}" height="${height}" />\n` +
-                     `<bpmndi:BPMNLabel><dc:Bounds x="${x}" y="${y+height+5}" width="${width}" height="14" /></bpmndi:BPMNLabel>\n` +
+        shapesXml += `<bpmndi:BPMNShape id="${xmlId}_di" bpmnElement="${xmlId}">\n` +
+                     `<dc:Bounds x="${pos.x}" y="${pos.y}" width="${pos.width}" height="${pos.height}" />\n` +
+                     `<bpmndi:BPMNLabel><dc:Bounds x="${pos.x}" y="${pos.y + pos.height + 5}" width="${pos.width}" height="28" /></bpmndi:BPMNLabel>\n` +
                      `</bpmndi:BPMNShape>\n`;
-        
-        currentX += NODE_WIDTH + 50; // Move to next column
     });
-    
-    // Generate edges now that all node positions are known
+
     nodes.forEach(node => {
         node.outputs.forEach(output => {
-            const sourcePos = nodePositions[node.id];
-            const targetPos = nodePositions[output.target];
-            if (sourcePos && targetPos) {
-                const flowId = `Flow_${node.id}_${output.target}`;
-                const sourceX = sourcePos.x + sourcePos.width;
-                const sourceY = sourcePos.y + sourcePos.height / 2;
-                const targetX = targetPos.x;
-                const targetY = targetPos.y + targetPos.height / 2;
-                edgesXml += `<bpmndi:BPMNEdge id="${flowId}_di" bpmnElement="${flowId}">\n` +
-                            `<di:waypoint x="${sourceX}" y="${sourceY}" />\n` +
-                            `<di:waypoint x="${targetX}" y="${targetY}" />\n` +
-                            (output.label ? `<bpmndi:BPMNLabel><dc:Bounds x="${(sourceX + targetX) / 2 - 20}" y="${sourceY - 20}" width="40" height="14" /></bpmndi:BPMNLabel>\n` : '') +
-                            `</bpmndi:BPMNEdge>\n`;
-            }
+            const sourcePos = positions[node.id];
+            const targetPos = positions[output.target];
+            const flowId = `Flow_${node.id}_${output.target}`;
+            
+            edgesXml += `<bpmndi:BPMNEdge id="${flowId}_di" bpmnElement="${flowId}">\n` +
+                        `<di:waypoint x="${sourcePos.x + sourcePos.width}" y="${sourcePos.y + sourcePos.height / 2}" />\n` +
+                        `<di:waypoint x="${targetPos.x}" y="${targetPos.y + targetPos.height / 2}" />\n` +
+                        `</bpmndi:BPMNEdge>\n`;
         });
     });
 
-    // Assemble the final XML
+    // Create participant and lanes
+    let participantXml = '';
+    if (lanes && lanes.length > 0) {
+        const participantId = `Participant_${uuidv4()}`;
+        let lanesXml = `<bpmn:laneSet id="LaneSet_${uuidv4()}">`;
+        lanes.forEach(laneName => {
+            lanesXml += `<bpmn:lane id="Lane_${laneName.replace(/\s/g, '_')}" name="${laneName}">`;
+            nodes.filter(n => n.lane === laneName).forEach(n => {
+                lanesXml += `<bpmn:flowNodeRef>${n.xmlId}</bpmn:flowNodeRef>`;
+            });
+            lanesXml += `</bpmn:lane>`;
+        });
+        lanesXml += `</bpmn:laneSet>`;
+
+        participantXml = `<bpmn:collaboration id="${collaborationId}">\n` +
+                         `<bpmn:participant id="${participantId}" name="Process" processRef="${processId}" />\n` +
+                         `</bpmn:collaboration>\n` +
+                         `<bpmn:process id="${processId}" isExecutable="false">\n`+
+                         `${lanesXml}${elementsXml}${flowsXml}</bpmn:process>\n`;
+    } else {
+        participantXml = `<bpmn:process id="${processId}" isExecutable="false">${elementsXml}${flowsXml}</bpmn:process>\n`;
+    }
+
     return `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_${uuidv4()}" targetNamespace="http://bpmn.io/schema/bpmn">
-  <bpmn:collaboration id="${collaborationId}">
-    <bpmn:participant id="${participantId}" name="Process" processRef="${processId}" />
-  </bpmn:collaboration>
-  <bpmn:process id="${processId}" isExecutable="false">
-    ${lanesXml}
-    ${elementsXml}
-    ${flowsXml}
-  </bpmn:process>
+  ${participantXml}
   <bpmndi:BPMNDiagram id="${diagramId}">
-    <bpmndi:BPMNPlane id="${planeId}" bpmnElement="${collaborationId}">
-      <bpmndi:BPMNShape id="${participantId}_di" bpmnElement="${participantId}" isHorizontal="true">
-        <dc:Bounds x="150" y="80" width="${currentX}" height="${yOffset}" />
-      </bpmndi:BPMNShape>
+    <bpmndi:BPMNPlane id="${planeId}" bpmnElement="${lanes.length > 0 ? collaborationId : processId}">
       ${shapesXml}
       ${edgesXml}
     </bpmndi:BPMNPlane>

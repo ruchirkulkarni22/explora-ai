@@ -1,9 +1,10 @@
 // client/src/App.js
 // This version integrates a full BPMN.io diagram editor for in-browser editing of process flows.
+// QUALITY UPGRADE: The loading spinner is replaced with a progress bar and more realistic, dynamic status updates.
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FileText, TestTube2, Presentation, Loader2, UploadCloud, ChevronLeft, AlertCircle, CheckCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive, Edit, Image, FileCode } from 'lucide-react';
+import { FileText, TestTube2, Presentation, UploadCloud, ChevronLeft, AlertCircle, CheckCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive, Edit, Image, FileCode } from 'lucide-react';
 import BpmnJS from 'bpmn-js/lib/Modeler';
 import 'bpmn-js/dist/assets/diagram-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
@@ -90,7 +91,7 @@ const BpmnEditor = ({ bpmnXml, onBack, diagramName }) => {
                  </div>
             </div>
             <div ref={canvasRef} className="flex-grow w-full h-full bg-gray-50 rounded-lg border">
-                {!isModelerReady && <div className="flex items-center justify-center h-full"><Loader2 className="w-12 h-12 animate-spin text-indigo-500" /></div>}
+                {!isModelerReady && <div className="flex items-center justify-center h-full"><p>Loading Editor...</p></div>}
             </div>
         </div>
     );
@@ -134,14 +135,20 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => (
     </div>
 );
 
-
-const LoadingSpinner = ({ message }) => (
-    <div className="flex flex-col items-center justify-center text-center p-8">
-        <Loader2 className="w-16 h-16 text-indigo-500 animate-spin mb-6" />
-        <h3 className="text-2xl font-semibold text-gray-700">Processing your documents...</h3>
-        <p className="text-gray-500 mt-2">{message}</p>
+// **NEW**: Loading component with a progress bar and more professional text.
+const LoadingProgress = ({ progress, message }) => (
+    <div className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto">
+        <h3 className="text-2xl font-semibold text-gray-800 mb-4">Generating BRD & Process Flows...</h3>
+        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+            <div 
+                className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-out" 
+                style={{ width: `${progress}%` }}
+            ></div>
+        </div>
+        <p className="text-indigo-700 font-semibold mt-2 h-6 transition-opacity duration-300">{message}</p>
     </div>
 );
+
 
 const ErrorDisplay = ({ message, onRetry }) => (
     <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg max-w-3xl mx-auto">
@@ -184,7 +191,6 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
         link.parentNode.removeChild(link);
     };
     
-    // Separate artifacts into downloadable and editable
     const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type !== 'bpmn');
     const editableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type === 'bpmn');
 
@@ -195,7 +201,6 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
             <p className="text-gray-600 mb-8">Your selected artifacts are ready.</p>
             
             <div className="space-y-6">
-                {/* Render Editable Artifacts (Diagrams) */}
                 {editableArtifacts.length > 0 && (
                     <div className="bg-white p-4 rounded-lg shadow space-y-4">
                          <h4 className="font-semibold text-lg text-gray-800">Editable Process Flows</h4>
@@ -210,7 +215,6 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
                     </div>
                 )}
 
-                {/* Render Downloadable Artifacts */}
                 {downloadableArtifacts.length > 0 && (
                      <div className="bg-white p-4 rounded-lg shadow">
                          <h4 className="font-semibold text-lg text-gray-800 mb-3">Downloadable Documents</h4>
@@ -242,8 +246,11 @@ export default function App() {
     const [error, setError] = useState(null);
     const [isSuccess, setIsSuccess] = useState(false);
     const [generatedArtifacts, setGeneratedArtifacts] = useState({});
-    const [diagramToEdit, setDiagramToEdit] = useState(null); // Holds the BPMN XML for the editor
+    const [diagramToEdit, setDiagramToEdit] = useState(null);
     
+    const [loadingMessage, setLoadingMessage] = useState('');
+    const [progress, setProgress] = useState(0);
+
     const [selectedArtifacts, setSelectedArtifacts] = useState({
         brd: true,
         anonymized: true,
@@ -251,6 +258,35 @@ export default function App() {
         asisFlow: true,
         tobeFlow: true,
     });
+
+    // **MODIFIED**: Switched to a more realistic, timed sequence of loading steps.
+    const loadingSteps = [
+        { message: "Analyzing documents for key entities...", progress: 10, duration: 4000 },
+        { message: "Masking confidential information...", progress: 25, duration: 3500 },
+        { message: "Drafting Business Requirements Document...", progress: 50, duration: 8000 },
+        { message: "Creating As-Is Process Flow...", progress: 65, duration: 4000 },
+        { message: "Creating To-Be Process Flow...", progress: 80, duration: 4000 },
+        { message: "Packaging final artifacts...", progress: 95, duration: 2000 },
+    ];
+
+    useEffect(() => {
+        if (isLoading) {
+            let currentStep = 0;
+            const runStep = () => {
+                if (currentStep < loadingSteps.length) {
+                    const step = loadingSteps[currentStep];
+                    setLoadingMessage(step.message);
+                    setProgress(step.progress);
+                    setTimeout(() => {
+                        currentStep++;
+                        runStep();
+                    }, step.duration);
+                }
+            };
+            runStep();
+        }
+    }, [isLoading]);
+
 
     const handleCheckboxChange = (id, checked) => {
         setSelectedArtifacts(prev => ({ ...prev, [id]: checked }));
@@ -281,6 +317,8 @@ export default function App() {
         setIsSuccess(false);
         setGeneratedArtifacts({});
         setDiagramToEdit(null);
+        setLoadingMessage('');
+        setProgress(0);
     }, []);
     
     const handleBackToResults = () => {
@@ -349,7 +387,7 @@ export default function App() {
                 <p className="text-lg text-gray-500 max-w-3xl mx-auto">Upload your documents and select which artifacts you'd like to generate.</p>
             </div>
 
-            {isLoading && <LoadingSpinner message="AI is analyzing and generating your documents..." />}
+            {isLoading && <LoadingProgress progress={progress} message={loadingMessage} />}
             {isSuccess && !diagramToEdit && <SuccessDisplay onReset={resetState} generatedArtifacts={generatedArtifacts} onEditDiagram={handleEditDiagram} />}
 
             {!isLoading && !isSuccess && (
