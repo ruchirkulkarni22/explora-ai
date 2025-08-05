@@ -390,7 +390,7 @@ const aiConfig = {
     brdGenerationProvider: 'openrouter',
     flowGenerationProvider: 'openrouter',
     sectionExtractionProvider: 'openrouter',
-    testCaseGenerationProvider: 'openrouter', // **NEW**
+    testCaseGenerationProvider: 'openrouter', // 
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
@@ -410,10 +410,10 @@ const aiConfig = {
     },
     openrouter: {
         apiKey: process.env.OPENROUTER_API_KEY,
-        brdGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
-        flowGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
-        sectionExtractionModel: 'deepseek/deepseek-chat-v3-0324:free',
-        testCaseGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
+        brdGenerationModel: 'qwen/qwen3-coder:free',
+        flowGenerationModel: 'qwen/qwen3-coder:free',
+        sectionExtractionModel: 'qwen/qwen3-coder:free',
+        testCaseGenerationModel: 'qwen/qwen3-coder:free',
         apiBaseUrl: 'https://openrouter.ai/api/v1',
         siteUrl: 'http://localhost:3000',
         appName: 'Explora'
@@ -1155,7 +1155,7 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
             ["Passed", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Pass")` }],
             ["Failed", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Fail")` }],
             ["Blocked", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Blocked")` }],
-            ["Not Run", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "")` }]
+            ["Steps Not Run", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "")` }]
         ];
         
         const worksheet2 = xlsx.utils.aoa_to_sheet(dashboardData);

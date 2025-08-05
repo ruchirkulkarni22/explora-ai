@@ -1,10 +1,10 @@
 // client/src/TestCaseGeneratorPage.js
 // This new component handles the UI and logic for the Test Case Generation feature.
-// **UPDATED** with a success screen and preview table for better UX.
+// **UPDATED** with a new "Test Case Card" preview for better UX.
 
 import React, { useState, useCallback } from 'react';
 import axios from 'axios';
-import { UploadCloud, ChevronLeft, AlertCircle, Sparkles, XCircle, Download, CheckCircle } from 'lucide-react';
+import { UploadCloud, ChevronLeft, AlertCircle, Sparkles, XCircle, Download, CheckCircle, Star, ListOrdered } from 'lucide-react';
 
 // --- Reusable Helper Components ---
 
@@ -59,34 +59,49 @@ const ErrorDisplay = ({ message, onRetry }) => (
     </div>
 );
 
-// **NEW**: Success screen component with preview table
+// **NEW**: Success screen component with card-based preview
 const SuccessDisplay = ({ generatedFile, onDownload, onReset }) => {
     const previewData = generatedFile.preview || [];
-    const headers = previewData.length > 0 ? Object.keys(previewData[0]).slice(0, 5) : []; // Show first 5 columns
+
+    const PriorityBadge = ({ priority }) => {
+        const lowerPriority = priority.toLowerCase();
+        let colorClasses = "bg-gray-100 text-gray-800";
+        if (lowerPriority.includes("critical")) {
+            colorClasses = "bg-red-100 text-red-800";
+        } else if (lowerPriority.includes("high")) {
+            colorClasses = "bg-yellow-100 text-yellow-800";
+        } else if (lowerPriority.includes("medium")) {
+            colorClasses = "bg-blue-100 text-blue-800";
+        }
+        return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClasses}`}><Star className="w-3 h-3 mr-1.5" />{priority}</span>;
+    };
 
     return (
         <div className="text-center p-8 bg-green-50 rounded-2xl max-w-7xl mx-auto border-2 border-green-200">
             <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-gray-800 mb-3">Generation Complete!</h2>
-            <p className="text-gray-600 mb-8">Your test case document is ready to download.</p>
+            <p className="text-gray-600 mb-8">Your test case document with a live dashboard is ready to download.</p>
             
-            <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">File Preview (First 5 Rows)</h3>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm text-left text-gray-500">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                {headers.map(header => <th key={header} scope="col" className="px-4 py-3">{header}</th>)}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {previewData.map((row, rowIndex) => (
-                                <tr key={rowIndex} className="bg-white border-b hover:bg-gray-50">
-                                    {headers.map(header => <td key={`${rowIndex}-${header}`} className="px-4 py-4 truncate max-w-xs">{row[header]}</td>)}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <div className="bg-white p-6 rounded-lg shadow-md mb-8 text-left">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Document Preview</h3>
+                <div className="space-y-4">
+                    {previewData.map(testCase => (
+                        <div key={testCase.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div className="flex justify-between items-start">
+                                <h4 className="font-bold text-indigo-700">{testCase.id}</h4>
+                                <PriorityBadge priority={testCase.priority} />
+                            </div>
+                            <p className="text-gray-600 mt-1 mb-3">{testCase.summary}</p>
+                            <div className="border-t border-gray-200 pt-2">
+                                <h5 className="font-semibold text-sm text-gray-500 mb-2 flex items-center"><ListOrdered className="w-4 h-4 mr-2"/>Steps:</h5>
+                                <ol className="list-decimal list-inside text-sm space-y-1">
+                                    {testCase.steps.map(step => (
+                                        <li key={step.number} className="text-gray-700">{step.description}</li>
+                                    ))}
+                                </ol>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
 
