@@ -15,6 +15,7 @@ const docx = require('docx');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType } = docx;
 const { spawn } = require('child_process');
 const jszip = require('jszip');
+const xlsx = require('xlsx'); // **NEW**: Added for Excel file generation
 
 const app = express();
 const port = 3001;
@@ -309,18 +310,94 @@ For example, if the document has a section "## 6. Current State Overview" follow
 
 The section to extract is: `;
 
+// --- **NEW**: TEST CASE GENERATION PROMPT (Feature 2) ---
+// --- FINAL - V4: DEDUPLICATION + CLARITY + FLEXIBILITY ---
+const TEST_CASE_SYSTEM_PROMPT = `You are a world-class QA Lead with 20 years of experience in testing complex enterprise systems like Oracle Fusion and SAP.
+
+Your task is to analyze a Business Requirements Document (BRD) — or any equivalent input such as user stories, solution design documents, UI mockups, or meeting notes — and generate a comprehensive, professional, and detailed set of test case scenarios. These test cases must be suitable for immediate execution by a manual tester and structured for import into a test management system.
+
+CORE TASK:
+For each functional requirement in the input, generate one or more complete test cases. Break each test case into granular test steps. Each test step must be output as a separate JSON object.
+
+If a requirement is unclear or incomplete, make reasonable assumptions and include an additional key: "Note": "Clarification required".
+
+OUTPUT FORMAT:
+Your output must be a **single, valid JSON array**. Each object in the array represents **one test step** and must follow this exact structure:
+
+{
+  "Test Case ID": "<string>",
+  "Module": "<string>",
+  "Feature": "<string>",
+  "Test Case Summary": "<string>",
+  "Test Type": "<string>",
+  "Priority": "<string>",
+  "Prerequisites": "<string>",
+  "Epic Link": "<string>",
+  "Sprint": "<string>",
+  "Step Number": 1,
+  "Step Description": "<string>",
+  "Test Data": "<string>",
+  "Expected Result": "<string>"
+}
+
+Use this only as a **format guide**. The value "<string>" is provided strictly so you know the data type to be generated. Do not reuse any placeholder values. All field values must be fully derived from the BRD content. The JSON must contain only values relevant to the specific test scenario described in the input.
+
+If assumptions were made due to missing BRD data, add an optional key:
+"Note": "Clarification required"
+
+CRITICAL QUALITY GUIDELINES:
+
+1. PERSONA ADHERENCE:
+   Think like a meticulous QA Lead. Your test cases should be highly structured, complete, and actionable.
+
+2. NO GENERIC CONTENT:
+   Avoid placeholders or vague instructions.
+   - BAD: "Enter user data."
+   - GOOD: "Enter First Name: John, Last Name: Doe, DOB: 1990-05-15"
+   - BAD: "Verify the result."
+   - GOOD: "Verify that the employee's status is 'Active - Payroll Eligible' and a confirmation email is sent to the manager."
+
+3. SPECIFICITY IS KEY:
+   - "Test Case ID": Use readable, traceable IDs like <MODULE>_<TYPE>_<SEQ>.
+   - "Module" and "Feature": Derive from input accurately. Be specific (e.g., "Talent Management" not "HR").
+   - "Test Data": Provide realistic values when input is needed.
+   - "Expected Result": Must be observable and precise (UI state, messages, database effects, etc.).
+
+4. COMPREHENSIVE COVERAGE:
+   - **Positive Scenarios**: Cover all “happy path” flows.
+   - **Negative Scenarios**: Include invalid inputs, permissions issues, incorrect formats.
+   - **Edge Cases**: Include special characters, empty fields, large/small values, etc.
+   - **Postconditions**: Add final verification steps that confirm system updates, status, or record creation.
+
+5. ANTI-DUPLICATION RULE:
+   - You MUST NOT generate duplicate or redundant test cases or steps.
+   - A duplicate is any test step that matches another in **Test Case Summary**, **Step Description**, and **Expected Result**.
+   - If a new requirement is only a slight variation, add it as a **negative** or **edge case** to the existing "Test Case ID" rather than creating a new one.
+   - Continuously review already-conceptualized test cases before adding new ones.
+
+6. STRUCTURE AND FORMAT:
+   - JSON Only: Do not output anything except the valid JSON array.
+   - One Step = One Object: A test case with 6 steps should produce 6 distinct JSON objects with the same metadata.
+   - Use Exact Keys: Match field names **exactly**, including spaces and capitalization.
+   - Do NOT include fields like "Actual Result", "Tester", "Defect ID", or "Execution Date".
+
+Begin now. Output only the final JSON array of test steps. If no valid steps can be generated, return an empty array.
+`;
+
 // configuration settings for AI providers
 const aiConfig = {
     entityExtractionProvider: 'spacy',
     brdGenerationProvider: 'openrouter',
-    flowGenerationProvider: 'openrouter', // This now generates JSON
+    flowGenerationProvider: 'openrouter',
     sectionExtractionProvider: 'openrouter',
+    testCaseGenerationProvider: 'openrouter', // **NEW**
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
         brdGenerationModel: 'gemini-2.5-flash',
         flowGenerationModel: 'gemini-2.5-flash',
-        sectionExtractionModel: 'gemini-1.5-flash',
+        sectionExtractionModel: 'gemini-2.5-flash',
+        testCaseGenerationModel: 'gemini-2.5-flash',
         apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
     },
     openai: {
@@ -328,13 +405,15 @@ const aiConfig = {
         brdGenerationModel: 'gpt-4o',
         flowGenerationModel: 'gpt-4o',
         sectionExtractionModel: 'gpt-4o',
+        testCaseGenerationModel: 'gpt-4o',
         apiBaseUrl: 'https://api.openai.com/v1',
     },
     openrouter: {
         apiKey: process.env.OPENROUTER_API_KEY,
-        brdGenerationModel: 'z-ai/glm-4.5-air:free',
-        flowGenerationModel: 'z-ai/glm-4.5-air:free',
-        sectionExtractionModel: 'z-ai/glm-4.5-air:free',
+        brdGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
+        flowGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
+        sectionExtractionModel: 'deepseek/deepseek-chat-v3-0324:free',
+        testCaseGenerationModel: 'deepseek/deepseek-chat-v3-0324:free',
         apiBaseUrl: 'https://openrouter.ai/api/v1',
         siteUrl: 'http://localhost:3000',
         appName: 'Explora'
@@ -817,6 +896,7 @@ ${anonymizedContent}`;
 };
 
 const anonymizeText = async (text) => {
+    console.log(`Intelligently Anonymizing provided documents..`);
     const entities = await extractEntities(text);
     const mapping = new Map();
     let anonymizedText = text;
@@ -842,7 +922,7 @@ const anonymizeText = async (text) => {
 // --- API Endpoints ---
 // ===================================================================================
 
-app.post('/api/generate', upload.array('files', 10), async (req, res) => {
+app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
     const reqId = uuidv4().slice(0, 8);
     console.log(`[${reqId}] Received request for /api/generate with ${req.files.length} file(s).`);
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No files uploaded.' });
@@ -944,6 +1024,188 @@ app.post('/api/generate', upload.array('files', 10), async (req, res) => {
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate:`, error);
         res.status(500).json({ error: error.message });
+    }
+});
+
+// --- API Endpoint for Feature 2: Test Case Generation ---
+app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res) => {
+    const reqId = uuidv4().slice(0, 8);
+    console.log(`[${reqId}] Received request for /api/generate-test-cases with ${req.files.length} file(s).`);
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded.' });
+    }
+
+    try {
+        // 1. Combine all uploaded documents into a single text block
+        let combinedOriginalContent = '';
+        for (const file of req.files) {
+            const fileContent = await getFileContent(file);
+            combinedOriginalContent += `--- START OF DOCUMENT: ${file.originalname} ---\n\n${fileContent}\n\n--- END OF DOCUMENT ---\n\n`;
+        }
+
+        // 2. Anonymize the combined text to protect PII
+        console.log(`[${reqId}] Anonymizing document content...`);
+        const { anonymizedText, mapping } = await anonymizeText(combinedOriginalContent);
+
+        // 3. Call AI to generate test cases in JSON format
+        console.log(`[${reqId}] Calling AI with V3 prompt to generate test cases...`);
+        const userPromptForAI = `Here is the BRD content. Please generate test cases based on it:\n\n${anonymizedText}`;
+        const { apiKey, apiBaseUrl, testCaseGenerationModel } = aiConfig.gemini;
+        const apiUrl = `${apiBaseUrl}/${testCaseGenerationModel}:generateContent?key=${apiKey}`;
+        const fullPrompt = `${TEST_CASE_SYSTEM_PROMPT}\n\n${userPromptForAI}`;
+        const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
+        const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        if (!response.ok) throw new Error(`Gemini Test Case generation failed with status ${response.status}`);
+        const result = await response.json();
+        const rawJsonResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawJsonResponse) throw new Error("AI returned an empty or invalid response for test cases.");
+
+        // 4. De-anonymize the generated JSON content
+        console.log(`[${reqId}] De-anonymizing generated test cases...`);
+        let deAnonymizedResponse = rawJsonResponse;
+        for (let [code, original] of mapping.entries()) {
+            const regex = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g');
+            deAnonymizedResponse = deAnonymizedResponse.replace(regex, original);
+        }
+        
+        // 5. Parse the final JSON with robust extraction
+        let testCasesJson;
+        try {
+            const jsonMatch = deAnonymizedResponse.match(/\[[\s\S]*\]/);
+            if (!jsonMatch) {
+                throw new Error("No valid JSON array found in the AI response.");
+            }
+            const jsonString = jsonMatch[0];
+            testCasesJson = JSON.parse(jsonString);
+        } catch (e) {
+            console.error(`[${reqId}] Failed to parse JSON from AI. Raw response:`, deAnonymizedResponse);
+            throw new Error(`The AI returned an invalid JSON format for the test cases. Parser error: ${e.message}`);
+        }
+        
+        // **NEW**: Sort the results to ensure logical order
+        testCasesJson.sort((a, b) => {
+            if (a["Test Case ID"] < b["Test Case ID"]) return -1;
+            if (a["Test Case ID"] > b["Test Case ID"]) return 1;
+            return a["Step Number"] - b["Step Number"];
+        });
+
+        // 6. Add the empty columns required by the template to each row
+        const finalTestCases = testCasesJson.map(tc => ({
+            ...tc,
+            "Actual Result": "",
+            "Status": "",
+            "Tester": "",
+            "Execution Date": "",
+            "Defect ID": "",
+        }));
+
+        // 7. Convert final JSON to a styled Excel file buffer
+        console.log(`[${reqId}] Creating STYLED Excel file with Dashboard...`);
+        const workbook = xlsx.utils.book_new();
+        
+        // --- Create Sheet 1: Test Script ---
+        const worksheet1 = xlsx.utils.json_to_sheet(finalTestCases); 
+
+        // Style header
+        const headerStyle = {
+            font: { bold: true, color: { rgb: "FFFFFF" } },
+            fill: { fgColor: { rgb: "4F46E5" } },
+            alignment: { vertical: "center", horizontal: "center" }
+        };
+        const headers = Object.keys(finalTestCases[0] || {});
+        headers.forEach((_, index) => {
+            const cellAddress = xlsx.utils.encode_cell({ c: index, r: 0 });
+            if(worksheet1[cellAddress]) {
+                worksheet1[cellAddress].s = headerStyle;
+            }
+        });
+
+        // Apply text wrapping and set row heights
+        const cellStyle = { alignment: { wrapText: true, vertical: "top" } };
+        const dataRange = xlsx.utils.decode_range(worksheet1['!ref']);
+        worksheet1['!rows'] = worksheet1['!rows'] || [];
+        for (let R = 0; R <= dataRange.e.r; ++R) {
+            worksheet1['!rows'][R] = { hpt: R === 0 ? 20 : 40 }; // Taller rows for data
+            for (let C = 0; C <= dataRange.e.c; ++C) {
+                const cell_address = { c: C, r: R };
+                const cell = xlsx.utils.encode_cell(cell_address);
+                if (!worksheet1[cell] || R === 0) continue;
+                worksheet1[cell].s = cellStyle;
+            }
+        }
+        
+        // Set column widths
+        worksheet1['!cols'] = [
+            { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, 
+            { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 50 }, { wch: 40 }, 
+            { wch: 50 }, { wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }
+        ];
+
+        xlsx.utils.book_append_sheet(workbook, worksheet1, "Test Script");
+
+        // --- Create Sheet 2: Dashboard ---
+        const uniqueTestCases = new Set(finalTestCases.map(tc => tc["Test Case ID"]));
+        const totalTestCases = uniqueTestCases.size;
+        const lastRow = finalTestCases.length + 1;
+        
+        // The 'Status' column is the 15th column, which is 'O' in Excel.
+        const dashboardData = [
+            ["Metric", "Count"],
+            ["Total Unique Test Cases", totalTestCases],
+            ["Passed", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Pass")` }],
+            ["Failed", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Fail")` }],
+            ["Blocked", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Blocked")` }],
+            ["Not Run", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "")` }]
+        ];
+        
+        const worksheet2 = xlsx.utils.aoa_to_sheet(dashboardData);
+        worksheet2['!cols'] = [{ wch: 25 }, { wch: 15 }];
+        worksheet2['A1'].s = headerStyle;
+        worksheet2['B1'].s = headerStyle;
+        
+        // Style the rest of the dashboard for clarity
+        for(let i = 1; i < dashboardData.length; i++) {
+             worksheet2[xlsx.utils.encode_cell({c:0, r:i})].s = { font: { bold: true } };
+             worksheet2[xlsx.utils.encode_cell({c:1, r:i})].s = { alignment: { horizontal: "right" } };
+        }
+
+
+        xlsx.utils.book_append_sheet(workbook, worksheet2, "Dashboard");
+
+        const excelBuffer = xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+        // 8. Send the file and a structured preview back to the client
+        const fileName = `Test_Cases_Dashboard_V6_${req.files[0].originalname.split('.')[0]}.xlsx`;
+        
+        // **NEW**: Create a structured preview
+        const previewData = [];
+        const uniqueIds = Array.from(uniqueTestCases).slice(0, 3); // Preview first 3 unique test cases
+        uniqueIds.forEach(id => {
+            const allStepsForId = finalTestCases.filter(tc => tc["Test Case ID"] === id);
+            if (allStepsForId.length > 0) {
+                previewData.push({
+                    id: id,
+                    summary: allStepsForId[0]["Test Case Summary"],
+                    priority: allStepsForId[0]["Priority"],
+                    steps: allStepsForId.map(step => ({
+                        number: step["Step Number"],
+                        description: step["Step Description"]
+                    }))
+                });
+            }
+        });
+
+        res.status(200).json({
+            fileName: fileName,
+            content: excelBuffer.toString('base64'),
+            contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            preview: previewData
+        });
+        console.log(`[${reqId}] Successfully generated and sent V6 test case file with dashboard and structured preview.`);
+
+    } catch (error) {
+        console.error(`[${reqId}] Error in /api/generate-test-cases:`, error);
+        res.status(500).json({ error: error.message || "An unknown server error occurred." });
     }
 });
 
