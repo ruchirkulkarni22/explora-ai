@@ -15,7 +15,7 @@ const docx = require('docx');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType } = docx;
 const { spawn } = require('child_process');
 const jszip = require('jszip');
-const xlsx = require('xlsx'); // **NEW**: Added for Excel file generation
+const xlsx = require('xlsx');
 
 const app = express();
 const port = 3001;
@@ -217,87 +217,73 @@ const BRD_MARKDOWN_TEMPLATE = `
 | [Approver Name] | [Role] | ____________________ |
 `;
 
-// **QUALITY UPGRADE**: Prompt enhanced for more professional language and stricter rules.
-const PROCESS_TO_JSON_PROMPT = `You are a system that translates natural language process descriptions into a structured JSON format suitable for BPMN diagram generation.
+const PROCESS_TO_DRAWIO_XML_PROMPT = `You are a system that translates natural language process descriptions into a Draw.io XML format.
 
-**TASK:** Analyze the provided process description and executive summary. Your entire output must be a single JSON object.
-
-**JSON STRUCTURE:**
-The JSON object must have two top-level keys: "lanes" and "nodes".
-
-1.  **"lanes"**: An array of strings representing the actors or systems in the process (e.g., "Customer", "Sales System", "Manager"). Identify these from the text. If no specific roles are mentioned, use a default lane like "System".
-
-2.  **"nodes"**: An array of objects, where each object represents a step, decision, or event in the process. Each node must have the following properties:
-    * **"id"**: A unique integer identifier for the node (e.g., 1, 2, 3), starting from 1.
-    * **"name"**: A concise, professional, verb-first label for the node (e.g., "Submit Application", "Is application complete?", "Process Approved"). Use professional business terminology.
-    * **"type"**: The type of BPMN element. Must be one of: "start", "end", "task", "decision".
-    * **"lane"**: The name of the lane (from the "lanes" array) that this node belongs to.
-    * **"outputs"**: An array of objects describing the connections from this node to others. Each connection object must have:
-        * **"target"**: The integer "id" of the node it connects to.
-        * **"label"**: (Optional) A concise label for the connection, ONLY for outputs from a "decision" node (e.g., "Yes", "No", "Approved", "Rejected").
+**TASK:** Analyze the provided process description. Your entire output must be a single, valid Draw.io XML structure within a \`<mxfile>\` tag.
 
 **RULES & GUIDELINES:**
-* **Professional Language**: Node names must be professional and concise. Start tasks with a verb.
-* **Logical Flow**: The first node must be of type "start". All process paths must eventually lead to one or more "end" nodes.
-* **Decision Integrity**: "decision" nodes must have at least two outputs, and each output must have a "label".
-* **Task/Event Integrity**: "task", "start", and "end" nodes should have exactly one output, with no "label", unless they are the final node.
-* **Valid Connections**: Ensure all node "id"s referenced in "outputs" exist. The process must be a valid, connected graph.
-* **JSON Only**: The entire response must be ONLY the JSON object, starting with \`{\` and ending with \`}\`. Do not wrap it in markdown or add explanations.
+1.  **XML Only:** The entire response must be ONLY the XML, starting with \`<mxfile ...>\` and ending with \`</mxfile>\`. Do not wrap it in markdown or add explanations.
+2.  **Layout:** Create a clean, left-to-right flowchart. Use a grid layout. Increment X-coordinates for sequential steps. Use Y-coordinates to separate swimlanes or decision branches. A good starting point is x="40", y="40". A good increment is 160 for x and 120 for y.
+3.  **Elements:**
+    * **Start Event:** Use an ellipse: \`style="ellipse;..."\`
+    * **End Event:** Use an ellipse with a thick border: \`style="ellipse;strokeWidth=2;..."\`
+    * **Task/Activity:** Use a rectangle: \`style="rounded=1;whiteSpace=wrap;html=1;"\`
+    * **Decision/Gateway:** Use a rhombus: \`style="rhombus;whiteSpace=wrap;html=1;"\`
+4.  **Connectors:** Use \`mxICell\` for connectors, specifying the \`source\` and \`target\` attribute with the \`id\` of the shapes. Add labels to connectors originating from a decision gateway (e.g., "Yes", "No").
+5.  **IDs:** Each element (\`mxCell\`) must have a unique \`id\`. Start with \`id="0"\` and \`id="1"\` for the default parent layers. Your first visible element should have \`id="2"\`.
+6.  **Swimlanes:** If actors/roles are mentioned (e.g., "Customer," "System"), create horizontal swimlanes. A swimlane is a large rectangle shape. Place the process steps for that actor inside their respective swimlane.
+7.  **Professionalism:** Use concise, professional, verb-first labels for tasks.
 
 **EXAMPLE:**
 Process Description: "The customer submits an order. The system checks if the item is in stock. If it is, the system processes the payment. If not, it notifies the customer that the item is backordered. The process ends after payment or notification."
 
-**PERFECT JSON OUTPUT:**
-{
-  "lanes": ["Customer", "System"],
-  "nodes": [
-    {
-      "id": 1,
-      "name": "Order Submitted",
-      "type": "start",
-      "lane": "Customer",
-      "outputs": [{ "target": 2 }]
-    },
-    {
-      "id": 2,
-      "name": "Submit Order",
-      "type": "task",
-      "lane": "Customer",
-      "outputs": [{ "target": 3 }]
-    },
-    {
-      "id": 3,
-      "name": "Check Stock Availability",
-      "type": "decision",
-      "lane": "System",
-      "outputs": [
-        { "target": 4, "label": "In Stock" },
-        { "target": 5, "label": "Out of Stock" }
-      ]
-    },
-    {
-      "id": 4,
-      "name": "Process Payment",
-      "type": "task",
-      "lane": "System",
-      "outputs": [{ "target": 6 }]
-    },
-    {
-      "id": 5,
-      "name": "Notify Customer of Backorder",
-      "type": "task",
-      "lane": "System",
-      "outputs": [{ "target": 6 }]
-    },
-    {
-      "id": 6,
-      "name": "Process Complete",
-      "type": "end",
-      "lane": "System",
-      "outputs": []
-    }
-  ]
-}
+**PERFECT XML OUTPUT:**
+<mxfile host="app.diagrams.net" modified="2023-10-27T12:00:00.000Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36" etag="m_aIeLpWOa_k32-32pWq" version="22.0.8" type="device">
+  <diagram name="Page-1" id="uniqueDiagramId">
+    <mxGraphModel dx="1434" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="swimlane1" value="Customer" style="swimlane;startSize=23;" parent="1" vertex="1">
+          <mxGeometry x="20" y="20" width="760" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="2" value="Order Submitted" style="ellipse;whiteSpace=wrap;html=1;" parent="swimlane1" vertex="1">
+          <mxGeometry x="40" y="50" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="swimlane2" value="System" style="swimlane;startSize=23;" parent="1" vertex="1">
+          <mxGeometry x="20" y="160" width="760" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="Check Stock Availability" style="rhombus;whiteSpace=wrap;html=1;" parent="swimlane2" vertex="1">
+          <mxGeometry x="220" y="50" width="120" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="Process Payment" style="rounded=1;whiteSpace=wrap;html=1;" parent="swimlane2" vertex="1">
+          <mxGeometry x="420" y="40" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="Notify Customer of Backorder" style="rounded=1;whiteSpace=wrap;html=1;" parent="swimlane2" vertex="1">
+          <mxGeometry x="420" y="140" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="Process Complete" style="ellipse;whiteSpace=wrap;html=1;strokeWidth=2;" parent="swimlane2" vertex="1">
+          <mxGeometry x="620" y="90" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="2" target="3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="In Stock" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="3" target="4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="Out of Stock" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="3" target="5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="4" target="6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5" target="6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
 `;
 
 
@@ -665,172 +651,11 @@ const generateWithChatCompletionAdapter = async (provider, systemPrompt, userPro
 // --- Core Application Logic & BPMN Generation ---
 // ===================================================================================
 
-// **QUALITY UPGRADE**: Builds valid BPMN XML from a structured JSON object using an advanced layout algorithm.
-const buildBpmnXmlFromJson = (processJson) => {
-    const { lanes, nodes } = processJson;
-    const nodeMap = new Map(nodes.map(n => [n.id, { ...n, children: [], parents: [] }]));
-
-    // Build graph relationships
-    nodes.forEach(node => {
-        node.outputs.forEach(output => {
-            if (nodeMap.has(output.target) && nodeMap.has(node.id)) {
-                nodeMap.get(node.id).children.push(nodeMap.get(output.target));
-                nodeMap.get(output.target).parents.push(nodeMap.get(node.id));
-            }
-        });
-    });
-
-    // 1. Calculate Columns (horizontal layers)
-    const nodeColumns = {};
-    let queue = nodes.filter(n => n.type === 'start').map(n => ({ id: n.id, col: 0 }));
-    let visited = new Set(queue.map(q => q.id));
-
-    while (queue.length > 0) {
-        const { id, col } = queue.shift();
-        nodeColumns[id] = Math.max(nodeColumns[id] || 0, col);
-        const node = nodeMap.get(id);
-        node.children.forEach(child => {
-            if (!visited.has(child.id)) {
-                queue.push({ id: child.id, col: col + 1 });
-                visited.add(child.id);
-            }
-        });
-    }
-
-    // Group nodes by column
-    const columns = [];
-    for (const nodeId in nodeColumns) {
-        const col = nodeColumns[nodeId];
-        if (!columns[col]) columns[col] = [];
-        columns[col].push(nodeMap.get(parseInt(nodeId)));
-    }
-
-    // 2. Calculate Positions
-    const positions = {};
-    const X_STEP = 180, Y_STEP = 120, X_START = 250, Y_START = 150;
-    const EVENT_SIZE = 36, GATEWAY_SIZE = 50, TASK_WIDTH = 100, TASK_HEIGHT = 80;
-
-    columns.forEach((colNodes, colIndex) => {
-        colNodes.forEach((node, rowIndex) => {
-            let width, height;
-            switch (node.type) {
-                case 'start': case 'end':
-                    width = height = EVENT_SIZE; break;
-                case 'decision':
-                    width = height = GATEWAY_SIZE; break;
-                default:
-                    width = TASK_WIDTH; height = TASK_HEIGHT;
-            }
-            positions[node.id] = {
-                x: X_START + colIndex * X_STEP,
-                y: Y_START + rowIndex * Y_STEP,
-                width,
-                height
-            };
-        });
-    });
-
-    // 3. Generate XML
-    const processId = `Process_${uuidv4()}`;
-    const collaborationId = `Collaboration_${uuidv4()}`;
-    const diagramId = `BPMNDiagram_${uuidv4()}`;
-    const planeId = `BPMNPlane_${uuidv4()}`;
-    
-    let elementsXml = '';
-    let flowsXml = '';
-    let shapesXml = '';
-    let edgesXml = '';
-
-    nodes.forEach(node => {
-        const xmlId = `Node_${node.id}`;
-        node.xmlId = xmlId;
-        const pos = positions[node.id];
-
-        let outgoingFlows = '';
-        node.outputs.forEach(output => {
-            const flowId = `Flow_${node.id}_${output.target}`;
-            const targetXmlId = `Node_${output.target}`;
-            const label = output.label ? `name="${output.label}"` : '';
-            flowsXml += `<bpmn:sequenceFlow id="${flowId}" sourceRef="${xmlId}" targetRef="${targetXmlId}" ${label} />\n`;
-            outgoingFlows += `<bpmn:outgoing>${flowId}</bpmn:outgoing>\n`;
-        });
-        
-        const incomingFlows = nodeMap.get(node.id).parents.map(p => `<bpmn:incoming>Flow_${p.id}_${node.id}</bpmn:incoming>`).join('\n');
-        
-        switch (node.type) {
-            case 'start':
-                elementsXml += `<bpmn:startEvent id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:startEvent>\n`;
-                break;
-            case 'end':
-                elementsXml += `<bpmn:endEvent id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:endEvent>\n`;
-                break;
-            case 'task':
-                elementsXml += `<bpmn:task id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:task>\n`;
-                break;
-            case 'decision':
-                elementsXml += `<bpmn:exclusiveGateway id="${xmlId}" name="${node.name}">${incomingFlows}${outgoingFlows}</bpmn:exclusiveGateway>\n`;
-                break;
-        }
-
-        shapesXml += `<bpmndi:BPMNShape id="${xmlId}_di" bpmnElement="${xmlId}">\n` +
-                     `<dc:Bounds x="${pos.x}" y="${pos.y}" width="${pos.width}" height="${pos.height}" />\n` +
-                     `<bpmndi:BPMNLabel><dc:Bounds x="${pos.x}" y="${pos.y + pos.height + 5}" width="${pos.width}" height="28" /></bpmndi:BPMNLabel>\n` +
-                     `</bpmndi:BPMNShape>\n`;
-    });
-
-    nodes.forEach(node => {
-        node.outputs.forEach(output => {
-            const sourcePos = positions[node.id];
-            const targetPos = positions[output.target];
-            const flowId = `Flow_${node.id}_${output.target}`;
-            
-            edgesXml += `<bpmndi:BPMNEdge id="${flowId}_di" bpmnElement="${flowId}">\n` +
-                        `<di:waypoint x="${sourcePos.x + sourcePos.width}" y="${sourcePos.y + sourcePos.height / 2}" />\n` +
-                        `<di:waypoint x="${targetPos.x}" y="${targetPos.y + targetPos.height / 2}" />\n` +
-                        `</bpmndi:BPMNEdge>\n`;
-        });
-    });
-
-    // Create participant and lanes
-    let participantXml = '';
-    if (lanes && lanes.length > 0) {
-        const participantId = `Participant_${uuidv4()}`;
-        let lanesXml = `<bpmn:laneSet id="LaneSet_${uuidv4()}">`;
-        lanes.forEach(laneName => {
-            lanesXml += `<bpmn:lane id="Lane_${laneName.replace(/\s/g, '_')}" name="${laneName}">`;
-            nodes.filter(n => n.lane === laneName).forEach(n => {
-                lanesXml += `<bpmn:flowNodeRef>${n.xmlId}</bpmn:flowNodeRef>`;
-            });
-            lanesXml += `</bpmn:lane>`;
-        });
-        lanesXml += `</bpmn:laneSet>`;
-
-        participantXml = `<bpmn:collaboration id="${collaborationId}">\n` +
-                         `<bpmn:participant id="${participantId}" name="Process" processRef="${processId}" />\n` +
-                         `</bpmn:collaboration>\n` +
-                         `<bpmn:process id="${processId}" isExecutable="false">\n`+
-                         `${lanesXml}${elementsXml}${flowsXml}</bpmn:process>\n`;
-    } else {
-        participantXml = `<bpmn:process id="${processId}" isExecutable="false">${elementsXml}${flowsXml}</bpmn:process>\n`;
-    }
-
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_${uuidv4()}" targetNamespace="http://bpmn.io/schema/bpmn">
-  ${participantXml}
-  <bpmndi:BPMNDiagram id="${diagramId}">
-    <bpmndi:BPMNPlane id="${planeId}" bpmnElement="${lanes.length > 0 ? collaborationId : processId}">
-      ${shapesXml}
-      ${edgesXml}
-    </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
-</bpmn:definitions>`;
-};
-
-const generateBpmnFromProcessDescription = async (processDescription, contextSummary) => {
+const generateDrawioXmlFromProcessDescription = async (processDescription, contextSummary) => {
     const provider = aiConfig.flowGenerationProvider;
-    console.log(`[LOG] Using provider: ${provider} for BPMN JSON generation.`);
-    
-    const fullPrompt = `${PROCESS_TO_JSON_PROMPT}\n\nExecutive Summary: ${contextSummary}\n\nProcess Description: ${processDescription}`;
+    console.log(`[LOG] Using provider: ${provider} for Draw.io XML generation.`);
+
+    const fullPrompt = `${PROCESS_TO_DRAWIO_XML_PROMPT}\n\nExecutive Summary for context: ${contextSummary}\n\nProcess Description to convert: ${processDescription}`;
 
     let rawResponse;
     if (provider === 'gemini') {
@@ -843,23 +668,16 @@ const generateBpmnFromProcessDescription = async (processDescription, contextSum
     } else { // Handles 'openai' and 'openrouter'
         rawResponse = await generateWithChatCompletionAdapter(provider, null, fullPrompt);
     }
-    
-    try {
-        // Clean the response to ensure it's valid JSON
-        const cleanedResponse = rawResponse.replace(/```json/g, '').replace(/```/g, '').trim();
-        const processJson = JSON.parse(cleanedResponse);
-        
-        // Validate basic structure
-        if (!processJson.lanes || !processJson.nodes) {
-            throw new Error("Generated JSON is missing 'lanes' or 'nodes' keys.");
-        }
-        
-        return buildBpmnXmlFromJson(processJson);
-    } catch (error) {
-        console.error("[ERROR] Failed to parse JSON from LLM or build BPMN:", error);
-        console.error("Raw response was:", rawResponse);
-        throw new Error("The AI failed to generate a valid process structure.");
+
+    // Clean the response to ensure it's valid XML
+    const cleanedResponse = rawResponse.replace(/```xml/g, '').replace(/```/g, '').trim();
+
+    if (!cleanedResponse.startsWith('<mxfile')) {
+        console.error("[ERROR] AI response for Draw.io XML is not valid:", cleanedResponse);
+        throw new Error("The AI failed to generate a valid Draw.io XML structure.");
     }
+
+    return cleanedResponse;
 };
 
 const extractEntities = async (text) => {
@@ -959,7 +777,7 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
         if (needsBrd) {
             console.log(`[${reqId}] Generating unified BRD from anonymized content...`);
             brdText = await generateBRD(anonymizedCombinedContent);
-            
+
             // Extract summary for context
             executiveSummary = await extractSectionWithAI(brdText, "Executive Summary");
 
@@ -979,15 +797,15 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
             console.log(`[${reqId}] Generating As-Is Flow...`);
             const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
             const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
-            const bpmnXml = await generateBpmnFromProcessDescription(sanitizedAsIsText, executiveSummary);
-            generatedResults.asisFlow = { type: 'bpmn', fileName: `${baseName}_As_Is_Flow.bpmn`, content: bpmnXml, contentType: 'application/xml' };
+            const drawioXml = await generateDrawioXmlFromProcessDescription(sanitizedAsIsText, executiveSummary);
+            generatedResults.asisFlow = { type: 'drawio', fileName: `${baseName}_As_Is_Flow.drawio`, content: drawioXml, contentType: 'application/xml' };
         }
         if (requestedArtifacts.includes('tobeFlow') && brdText) {
             console.log(`[${reqId}] Generating To-Be Flow...`);
             const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
             const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
-            const bpmnXml = await generateBpmnFromProcessDescription(sanitizedToBeText, executiveSummary);
-            generatedResults.tobeFlow = { type: 'bpmn', fileName: `${baseName}_To_Be_Flow.bpmn`, content: bpmnXml, contentType: 'application/xml' };
+            const drawioXml = await generateDrawioXmlFromProcessDescription(sanitizedToBeText, executiveSummary);
+            generatedResults.tobeFlow = { type: 'drawio', fileName: `${baseName}_To_Be_Flow.drawio`, content: drawioXml, contentType: 'application/xml' };
         }
 
         if (requestedArtifacts.includes('anonymized')) {
@@ -1014,7 +832,7 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
             for (let [code, original] of masterMapping.entries()) {
                 csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
             }
-            generatedResults.mapping = { type: 'csv', fileName: `${baseName}_Anonymized_Texts.zip`, content: Buffer.from(csvContent).toString('base64'), contentType: 'text/csv' };
+            generatedResults.mapping = { type: 'csv', fileName: `${baseName}_Anonymization_Key.csv`, content: Buffer.from(csvContent).toString('base64'), contentType: 'text/csv' };
         }
 
         console.log(`[${reqId}] Successfully generated all requested artifacts.`);

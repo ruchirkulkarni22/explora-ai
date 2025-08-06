@@ -21,6 +21,7 @@
     "mammoth": "^1.10.0",
     "multer": "^2.0.2",
     "node-fetch": "^2.7.0",
+    "react-drawio": "^1.0.6",
     "spacy-js": "^0.0.5",
     "uuid": "^11.1.0",
     "xlsx": "^0.18.5"

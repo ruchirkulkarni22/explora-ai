@@ -1,100 +1,61 @@
 // client/src/BrdGeneratorPage.js
-// This component contains all the UI and logic for the BRD & Process Flow Generation feature.
-// It is based on your original App.js file.
+// This component now uses react-drawio instead of bpmn-js for a modern
+// and more powerful diagram editing experience.
+// CHANGE: Updated the "Edit" button text to be cleaner and more readable.
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive, Edit, Image, FileCode } from 'lucide-react';
-import BpmnJS from 'bpmn-js/lib/Modeler';
-import 'bpmn-js/dist/assets/diagram-js.css';
-import 'bpmn-js/dist/assets/bpmn-font/css/bpmn.css';
+import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, KeyRound, Sparkles, Workflow, Square, CheckSquare, XCircle, FileArchive, Edit, X } from 'lucide-react';
+// Make sure to install it: npm install react-drawio
+import { DrawIoEmbed } from 'react-drawio';
 
-// --- BPMN Editor Component ---
-const BpmnEditor = ({ bpmnXml, onBack, diagramName }) => {
-    const canvasRef = useRef(null);
-    const modelerRef = useRef(null);
-    const [isModelerReady, setIsModelerReady] = useState(false);
 
-    useEffect(() => {
-        if (!canvasRef.current) return;
+// --- Draw.io Editor Component (Now a Full-Screen Modal) ---
+const DrawioEditor = ({ xml, onBack, diagramName }) => {
+    const drawioRef = useRef(null);
 
-        const modeler = new BpmnJS({
-            container: canvasRef.current,
-            keyboard: {
-                bindTo: window
-            }
-        });
-        modelerRef.current = modeler;
-
-        const openDiagram = async (xml) => {
-            try {
-                await modeler.importXML(xml);
-                const canvas = modeler.get('canvas');
-                canvas.zoom('fit-viewport');
-                setIsModelerReady(true);
-            } catch (err) {
-                console.error('Error importing BPMN XML', err);
-            }
-        };
-
-        if (bpmnXml) {
-            openDiagram(bpmnXml);
-        }
-
-        return () => {
-            modeler.destroy();
-            setIsModelerReady(false);
-        };
-    }, [bpmnXml]);
-
-    const handleExport = async (type) => {
-        if (!modelerRef.current) return;
-
-        try {
-            if (type === 'svg') {
-                const { svg } = await modelerRef.current.saveSVG();
-                downloadFile(`${diagramName}.svg`, svg, 'image/svg+xml');
-            } else {
-                const { xml } = await modelerRef.current.saveXML({ format: true });
-                downloadFile(`${diagramName}.bpmn`, xml, 'application/xml');
-            }
-        } catch (err) {
-            console.error('Failed to export', err);
-        }
-    };
-
-    const downloadFile = (filename, data, mimeType) => {
-        const blob = new Blob([data], { type: mimeType });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+    // This function will be called when the user clicks the save button inside Draw.io
+    const handleSave = (event) => {
+        console.log('Diagram saved within Draw.io iframe');
     };
 
     return (
-        <div className="w-full h-[80vh] bg-white rounded-2xl shadow-2xl flex flex-col p-4 border-2 border-gray-200">
-            <div className="flex justify-between items-center mb-4 pb-4 border-b">
-                 <button onClick={onBack} className="flex items-center text-indigo-600 font-semibold hover:text-indigo-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Results</button>
-                 <h3 className="text-xl font-bold text-gray-800">{diagramName}</h3>
-                 <div className="flex items-center gap-4">
-                    <button onClick={() => handleExport('bpmn')} disabled={!isModelerReady} className="flex items-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-all disabled:bg-gray-400">
-                        <FileCode className="w-5 h-5" /> Export BPMN
+        // Full-screen overlay with slightly more padding on larger screens
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 lg:p-10">
+            {/* Main modal container with overflow-hidden to enforce rounded corners on children */}
+            <div className="w-full h-full bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-gray-300 overflow-hidden">
+                {/* Header - flex-shrink-0 prevents it from shrinking */}
+                <div className="flex justify-between items-center p-4 border-b bg-gray-50 flex-shrink-0">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 truncate">{diagramName}</h3>
+                    <button
+                        onClick={onBack}
+                        className="flex items-center gap-2 bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-indigo-700 transition-all"
+                    >
+                        <X className="w-5 h-5" />
+                        <span>Close Editor</span>
                     </button>
-                     <button onClick={() => handleExport('svg')} disabled={!isModelerReady} className="flex items-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-green-700 transition-all disabled:bg-gray-400">
-                        <Image className="w-5 h-5" /> Export SVG
-                    </button>
-                 </div>
-            </div>
-            <div ref={canvasRef} className="flex-grow w-full h-full bg-gray-50 rounded-lg border">
-                {!isModelerReady && <div className="flex items-center justify-center h-full"><p>Loading Editor...</p></div>}
+                </div>
+                {/* Editor container - flex-grow allows it to fill all available space */}
+                <div className="flex-grow w-full h-full bg-gray-100">
+                    <DrawIoEmbed
+                        ref={drawioRef}
+                        xml={xml}
+                        onSave={handleSave}
+                        urlParameters={{
+                            ui: 'kennedy',
+                            spin: 1,
+                            // Ensures the diagram fits the container
+                            zoom: '1',
+                            // Hides the exit button within the iframe since we have our own
+                            noExitBtn: 1,
+                        }}
+                    />
+                </div>
             </div>
         </div>
     );
 };
+
 
 // --- Helper UI Components ---
 const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => (
@@ -105,7 +66,7 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => (
             <p className="text-gray-500 mt-2">(.docx, .txt, .md)</p>
         </label>
         <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={(e) => onFileSelect(e.target.files)} accept=".docx,.txt,.md" />
-        
+
         {selectedFiles.length > 0 && (
             <div className="mt-6">
                 <h4 className="font-semibold text-gray-700 text-center mb-3">Selected Files:</h4>
@@ -128,8 +89,8 @@ const LoadingProgress = ({ progress, message }) => (
     <div className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto">
         <h3 className="text-2xl font-semibold text-gray-800 mb-4">Generating BRD & Process Flows...</h3>
         <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-            <div 
-                className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-out" 
+            <div
+                className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-out"
                 style={{ width: `${progress}%` }}
             ></div>
         </div>
@@ -177,9 +138,16 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
         link.click();
         link.parentNode.removeChild(link);
     };
-    
-    const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type !== 'bpmn');
-    const editableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type === 'bpmn');
+
+    const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type !== 'drawio');
+    const editableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type === 'drawio');
+
+    // Helper function to create a clean display name for the edit buttons
+    const getFlowDisplayName = (key) => {
+        if (key === 'asisFlow') return 'As-Is Flow';
+        if (key === 'tobeFlow') return 'To-Be Flow';
+        return 'Process Flow'; // A sensible fallback
+    };
 
     return (
         <div className="text-center p-8 bg-green-50 rounded-2xl max-w-4xl mx-auto border-2 border-green-200">
@@ -188,7 +156,7 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-3">Generation Complete!</h2>
             <p className="text-gray-600 mb-8">Your selected artifacts are ready to be downloaded or edited.</p>
-            
+
             <div className="space-y-6">
                 {editableArtifacts.length > 0 && (
                     <div className="bg-white p-4 rounded-lg shadow space-y-4">
@@ -197,8 +165,9 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
                              <div key={key}>
                                  <button onClick={() => onEditDiagram(artifact)} className="w-full bg-blue-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 flex items-center justify-center">
                                     <Edit className="w-6 h-6 mr-3" />
-                                    Edit {artifact.fileName.replace('.bpmn', '')}
-                                </button>
+                                    {/* Use the helper function for a clean name */}
+                                    Edit {getFlowDisplayName(key)}
+                                 </button>
                              </div>
                          ))}
                     </div>
@@ -212,7 +181,7 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
                                  <button key={key} onClick={() => handleDownload(artifact)} className="w-full bg-indigo-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center">
                                     <Download className="w-6 h-6 mr-3" />
                                     Download {key.charAt(0).toUpperCase() + key.slice(1)}
-                                </button>
+                                 </button>
                             ))}
                         </div>
                     </div>
@@ -235,7 +204,7 @@ export default function BrdGeneratorPage({ onBack }) {
     const [isSuccess, setIsSuccess] = useState(false);
     const [generatedArtifacts, setGeneratedArtifacts] = useState({});
     const [diagramToEdit, setDiagramToEdit] = useState(null);
-    
+
     const [loadingMessage, setLoadingMessage] = useState('');
     const [progress, setProgress] = useState(0);
 
@@ -278,7 +247,7 @@ export default function BrdGeneratorPage({ onBack }) {
     const handleCheckboxChange = (id, checked) => {
         setSelectedArtifacts(prev => ({ ...prev, [id]: checked }));
     };
-    
+
     const handleFileSelect = (files) => {
         if (files) {
             setSelectedFiles(prevFiles => [...prevFiles, ...Array.from(files)]);
@@ -308,7 +277,7 @@ export default function BrdGeneratorPage({ onBack }) {
         setProgress(0);
         setPageState('generator');
     }, []);
-    
+
     const handleBackToResults = () => {
         setDiagramToEdit(null);
         setPageState('generator');
@@ -323,7 +292,7 @@ export default function BrdGeneratorPage({ onBack }) {
         const artifactsToRequest = Object.keys(selectedArtifacts).filter(key => selectedArtifacts[key]);
         if (selectedFiles.length === 0) { setError("Please select at least one file."); return; }
         if (artifactsToRequest.length === 0) { setError("Please select at least one artifact to generate."); return; }
-        
+
         setError(null);
         setIsLoading(true);
         setIsSuccess(false);
@@ -335,7 +304,6 @@ export default function BrdGeneratorPage({ onBack }) {
         formData.append('artifacts', JSON.stringify(artifactsToRequest));
 
         try {
-            // Note: The endpoint is now more specific for this feature
             const response = await axios.post('http://localhost:3001/api/generate-brd', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
@@ -349,42 +317,46 @@ export default function BrdGeneratorPage({ onBack }) {
         }
     };
 
-    if (pageState === 'diagramEditor') {
-        return <BpmnEditor bpmnXml={diagramToEdit.content} onBack={handleBackToResults} diagramName={diagramToEdit.fileName} />;
-    }
-
     return (
          <div>
-            <button onClick={onBack} className="flex items-center text-indigo-600 font-semibold mb-8 hover:text-indigo-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Home</button>
-            <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 mb-3">BRD & Process Flow Generation</h1>
-                <p className="text-lg text-gray-500 max-w-3xl mx-auto">Upload your documents and select which artifacts you'd like to generate.</p>
+            {/* Main page content */}
+            <div className={`${pageState === 'diagramEditor' ? 'hidden' : ''}`}>
+                <button onClick={onBack} className="flex items-center text-indigo-600 font-semibold mb-8 hover:text-indigo-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Home</button>
+                <div className="text-center mb-12">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 mb-3">BRD & Process Flow Generation</h1>
+                    <p className="text-lg text-gray-500 max-w-3xl mx-auto">Upload your documents and select which artifacts you'd like to generate.</p>
+                </div>
+
+                {isLoading && <LoadingProgress progress={progress} message={loadingMessage} />}
+                {isSuccess && <SuccessDisplay onReset={resetState} generatedArtifacts={generatedArtifacts} onEditDiagram={handleEditDiagram} />}
+
+                {!isLoading && !isSuccess && (
+                    <>
+                        <FileUploader onFileSelect={handleFileSelect} selectedFiles={selectedFiles} onFileRemove={handleFileRemove} />
+
+                        <div className="max-w-4xl mx-auto mt-8">
+                            <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Select Artifacts to Generate:</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                {artifactOptions.map(option => (
+                                    <ArtifactCheckbox key={option.id} id={option.id} label={option.label} checked={selectedArtifacts[option.id]} onChange={handleCheckboxChange} icon={option.icon} />
+                                ))}
+                            </div>
+                        </div>
+
+                        {error && <div className="mt-8"><ErrorDisplay message={error} onRetry={handleSubmit} /></div>}
+                        <div className="text-center mt-8">
+                            <button onClick={handleSubmit} disabled={selectedFiles.length === 0 || Object.values(selectedArtifacts).every(v => !v)} className="bg-indigo-600 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 flex items-center justify-center mx-auto">
+                                <Sparkles className="w-6 h-6 mr-3" />
+                                Generate Selected Documents
+                            </button>
+                        </div>
+                    </>
+                )}
             </div>
 
-            {isLoading && <LoadingProgress progress={progress} message={loadingMessage} />}
-            {isSuccess && <SuccessDisplay onReset={resetState} generatedArtifacts={generatedArtifacts} onEditDiagram={handleEditDiagram} />}
-
-            {!isLoading && !isSuccess && (
-                <>
-                    <FileUploader onFileSelect={handleFileSelect} selectedFiles={selectedFiles} onFileRemove={handleFileRemove} />
-                    
-                    <div className="max-w-4xl mx-auto mt-8">
-                        <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">Select Artifacts to Generate:</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                            {artifactOptions.map(option => (
-                                <ArtifactCheckbox key={option.id} id={option.id} label={option.label} checked={selectedArtifacts[option.id]} onChange={handleCheckboxChange} icon={option.icon} />
-                            ))}
-                        </div>
-                    </div>
-
-                    {error && <div className="mt-8"><ErrorDisplay message={error} onRetry={handleSubmit} /></div>}
-                    <div className="text-center mt-8">
-                        <button onClick={handleSubmit} disabled={selectedFiles.length === 0 || Object.values(selectedArtifacts).every(v => !v)} className="bg-indigo-600 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 flex items-center justify-center mx-auto">
-                            <Sparkles className="w-6 h-6 mr-3" />
-                            Generate Selected Documents
-                        </button>
-                    </div>
-                </>
+            {/* Full-screen editor modal */}
+            {pageState === 'diagramEditor' && (
+                <DrawioEditor xml={diagramToEdit.content} onBack={handleBackToResults} diagramName={diagramToEdit.fileName} />
             )}
         </div>
     );
