@@ -110,7 +110,7 @@ const SuccessDisplay = ({ generatedFile, onDownload, onReset }) => {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <button onClick={onDownload} className="w-full sm:w-auto bg-indigo-600 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center">
                     <Download className="w-6 h-6 mr-3" />
-                    Download "{generatedFile.fileName}"
+                    Download Test Cases
                 </button>
                 <button onClick={onReset} className="w-full sm:w-auto text-indigo-600 font-semibold hover:underline">
                     Generate Another
