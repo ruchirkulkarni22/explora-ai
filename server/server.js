@@ -390,7 +390,7 @@ const aiConfig = {
     brdGenerationProvider: 'openrouter',
     flowGenerationProvider: 'openrouter',
     sectionExtractionProvider: 'openrouter',
-    testCaseGenerationProvider: 'openrouter', // 
+    testCaseGenerationProvider: 'gemini',
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
@@ -935,7 +935,6 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
     }
 
     try {
-        // Add this code right after the `try {` line
         const firstFile = req.files[0];
         const originalName = firstFile.originalname;
         const baseName = originalName.includes('.')
@@ -1036,7 +1035,6 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
     }
 
     try {
-        // 1. Combine all uploaded documents into a single text block
         let combinedOriginalContent = '';
         for (const file of req.files) {
             const fileContent = await getFileContent(file);
@@ -1048,7 +1046,7 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
         const { anonymizedText, mapping } = await anonymizeText(combinedOriginalContent);
 
         // 3. Call AI to generate test cases in JSON format
-        console.log(`[${reqId}] Calling AI with V3 prompt to generate test cases...`);
+        console.log(`[${reqId}] Calling AI with prompt to generate test cases...`);
         const userPromptForAI = `Here is the BRD content. Please generate test cases based on it:\n\n${anonymizedText}`;
         const { apiKey, apiBaseUrl, testCaseGenerationModel } = aiConfig.gemini;
         const apiUrl = `${apiBaseUrl}/${testCaseGenerationModel}:generateContent?key=${apiKey}`;

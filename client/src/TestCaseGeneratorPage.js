@@ -85,12 +85,14 @@ const SuccessDisplay = ({ generatedFile, onDownload, onReset }) => {
             <div className="bg-white p-6 rounded-lg shadow-md mb-8 text-left">
                 <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Document Preview</h3>
                 <div className="space-y-4">
-                    {previewData.map(testCase => (
+                    {/* **UPDATED**: Changed `testCase.id` to a sequential number */}
+                    {previewData.map((testCase, index) => (
                         <div key={testCase.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                             <div className="flex justify-between items-start">
-                                <h4 className="font-bold text-indigo-700">{testCase.id}</h4>
+                                <h4 className="font-bold text-indigo-700">{`Test Case ${index + 1}`}</h4>
                                 <PriorityBadge priority={testCase.priority} />
                             </div>
+                            <p className="text-sm text-gray-500">ID: {testCase.id}</p>
                             <p className="text-gray-600 mt-1 mb-3">{testCase.summary}</p>
                             <div className="border-t border-gray-200 pt-2">
                                 <h5 className="font-semibold text-sm text-gray-500 mb-2 flex items-center"><ListOrdered className="w-4 h-4 mr-2"/>Steps:</h5>
