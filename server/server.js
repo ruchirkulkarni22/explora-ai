@@ -1026,7 +1026,6 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
     }
 });
 
-// --- API Endpoint for Feature 2: Test Case Generation ---
 app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res) => {
     const reqId = uuidv4().slice(0, 8);
     console.log(`[${reqId}] Received request for /api/generate-test-cases with ${req.files.length} file(s).`);
@@ -1041,12 +1040,10 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
             combinedOriginalContent += `--- START OF DOCUMENT: ${file.originalname} ---\n\n${fileContent}\n\n--- END OF DOCUMENT ---\n\n`;
         }
 
-        // 2. Anonymize the combined text to protect PII
         console.log(`[${reqId}] Anonymizing document content...`);
         const { anonymizedText, mapping } = await anonymizeText(combinedOriginalContent);
 
-        // 3. Call AI to generate test cases in JSON format
-        console.log(`[${reqId}] Calling AI with prompt to generate test cases...`);
+        console.log(`[${reqId}] Calling AI with V3 prompt to generate test cases...`);
         const userPromptForAI = `Here is the BRD content. Please generate test cases based on it:\n\n${anonymizedText}`;
         const { apiKey, apiBaseUrl, testCaseGenerationModel } = aiConfig.gemini;
         const apiUrl = `${apiBaseUrl}/${testCaseGenerationModel}:generateContent?key=${apiKey}`;
@@ -1058,36 +1055,30 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
         const rawJsonResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!rawJsonResponse) throw new Error("AI returned an empty or invalid response for test cases.");
 
-        // 4. De-anonymize the generated JSON content
         console.log(`[${reqId}] De-anonymizing generated test cases...`);
         let deAnonymizedResponse = rawJsonResponse;
         for (let [code, original] of mapping.entries()) {
             const regex = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g');
             deAnonymizedResponse = deAnonymizedResponse.replace(regex, original);
         }
-        
-        // 5. Parse the final JSON with robust extraction
+
         let testCasesJson;
         try {
             const jsonMatch = deAnonymizedResponse.match(/\[[\s\S]*\]/);
-            if (!jsonMatch) {
-                throw new Error("No valid JSON array found in the AI response.");
-            }
+            if (!jsonMatch) throw new Error("No valid JSON array found in the AI response.");
             const jsonString = jsonMatch[0];
             testCasesJson = JSON.parse(jsonString);
         } catch (e) {
             console.error(`[${reqId}] Failed to parse JSON from AI. Raw response:`, deAnonymizedResponse);
             throw new Error(`The AI returned an invalid JSON format for the test cases. Parser error: ${e.message}`);
         }
-        
-        // **NEW**: Sort the results to ensure logical order
+
         testCasesJson.sort((a, b) => {
             if (a["Test Case ID"] < b["Test Case ID"]) return -1;
             if (a["Test Case ID"] > b["Test Case ID"]) return 1;
             return a["Step Number"] - b["Step Number"];
         });
 
-        // 6. Add the empty columns required by the template to each row
         const finalTestCases = testCasesJson.map(tc => ({
             ...tc,
             "Actual Result": "",
@@ -1097,33 +1088,29 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
             "Defect ID": "",
         }));
 
-        // 7. Convert final JSON to a styled Excel file buffer
-        console.log(`[${reqId}] Creating STYLED Excel file with Dashboard...`);
         const workbook = xlsx.utils.book_new();
-        
-        // --- Create Sheet 1: Test Script ---
-        const worksheet1 = xlsx.utils.json_to_sheet(finalTestCases); 
 
-        // Style header
+        const worksheet1 = xlsx.utils.json_to_sheet(finalTestCases);
+
         const headerStyle = {
             font: { bold: true, color: { rgb: "FFFFFF" } },
             fill: { fgColor: { rgb: "4F46E5" } },
             alignment: { vertical: "center", horizontal: "center" }
         };
+
         const headers = Object.keys(finalTestCases[0] || {});
         headers.forEach((_, index) => {
             const cellAddress = xlsx.utils.encode_cell({ c: index, r: 0 });
-            if(worksheet1[cellAddress]) {
+            if (worksheet1[cellAddress]) {
                 worksheet1[cellAddress].s = headerStyle;
             }
         });
 
-        // Apply text wrapping and set row heights
         const cellStyle = { alignment: { wrapText: true, vertical: "top" } };
         const dataRange = xlsx.utils.decode_range(worksheet1['!ref']);
         worksheet1['!rows'] = worksheet1['!rows'] || [];
         for (let R = 0; R <= dataRange.e.r; ++R) {
-            worksheet1['!rows'][R] = { hpt: R === 0 ? 20 : 40 }; // Taller rows for data
+            worksheet1['!rows'][R] = { hpt: R === 0 ? 20 : 40 };
             for (let C = 0; C <= dataRange.e.c; ++C) {
                 const cell_address = { c: C, r: R };
                 const cell = xlsx.utils.encode_cell(cell_address);
@@ -1131,53 +1118,45 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
                 worksheet1[cell].s = cellStyle;
             }
         }
-        
-        // Set column widths
+
         worksheet1['!cols'] = [
-            { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 50 }, { wch: 15 }, { wch: 15 }, 
-            { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 50 }, { wch: 40 }, 
+            { wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 50 }, { wch: 15 }, { wch: 15 },
+            { wch: 40 }, { wch: 15 }, { wch: 15 }, { wch: 10 }, { wch: 50 }, { wch: 40 },
             { wch: 50 }, { wch: 30 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 15 }
         ];
 
         xlsx.utils.book_append_sheet(workbook, worksheet1, "Test Script");
 
-        // --- Create Sheet 2: Dashboard ---
-        const uniqueTestCases = new Set(finalTestCases.map(tc => tc["Test Case ID"]));
-        const totalTestCases = uniqueTestCases.size;
-        const lastRow = finalTestCases.length + 1;
-        
-        // The 'Status' column is the 15th column, which is 'O' in Excel.
-        const dashboardData = [
+        const uniqueTestCases = Array.from(new Set(finalTestCases.map(tc => tc["Test Case ID"])));
+        const dashboardLogicData = [["Test Case ID", "Overall Status"]];
+        uniqueTestCases.forEach((id, index) => {
+            const rowNum = index + 2;
+            const formula = `IF(COUNTIFS('Test Script'!A:A,A${rowNum},'Test Script'!O:O,"Fail")>0,"Fail",IF(COUNTIFS('Test Script'!A:A,A${rowNum},'Test Script'!O:O,"Blocked")>0,"Blocked",IF(COUNTIFS('Test Script'!A:A,A${rowNum},'Test Script'!O:O,"Pass")=COUNTIF('Test Script'!A:A,A${rowNum}),"Pass","Not Run")))`;
+            dashboardLogicData.push([id, { t: 's', f: formula }]);
+        });
+        const worksheet2 = xlsx.utils.aoa_to_sheet(dashboardLogicData);
+        xlsx.utils.book_append_sheet(workbook, worksheet2, "Dashboard Logic");
+        worksheet2['!hidden'] = true;
+
+        const dashboardSummaryData = [
             ["Metric", "Count"],
-            ["Total Unique Test Cases", totalTestCases],
-            ["Passed", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Pass")` }],
-            ["Failed", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Fail")` }],
-            ["Blocked", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "Blocked")` }],
-            ["Steps Not Run", { t: 'n', f: `COUNTIF('Test Script'!O2:O${lastRow}, "")` }]
+            ["Total Unique Test Cases", uniqueTestCases.length],
+            ["Passed", { t: 'n', f: `COUNTIF('Dashboard Logic'!B:B, "Pass")` }],
+            ["Failed", { t: 'n', f: `COUNTIF('Dashboard Logic'!B:B, "Fail")` }],
+            ["Blocked", { t: 'n', f: `COUNTIF('Dashboard Logic'!B:B, "Blocked")` }],
+            ["Not Run", { t: 'n', f: `COUNTIF('Dashboard Logic'!B:B, "Not Run")` }]
         ];
-        
-        const worksheet2 = xlsx.utils.aoa_to_sheet(dashboardData);
-        worksheet2['!cols'] = [{ wch: 25 }, { wch: 15 }];
-        worksheet2['A1'].s = headerStyle;
-        worksheet2['B1'].s = headerStyle;
-        
-        // Style the rest of the dashboard for clarity
-        for(let i = 1; i < dashboardData.length; i++) {
-             worksheet2[xlsx.utils.encode_cell({c:0, r:i})].s = { font: { bold: true } };
-             worksheet2[xlsx.utils.encode_cell({c:1, r:i})].s = { alignment: { horizontal: "right" } };
-        }
-
-
-        xlsx.utils.book_append_sheet(workbook, worksheet2, "Dashboard");
+        const worksheet3 = xlsx.utils.aoa_to_sheet(dashboardSummaryData);
+        worksheet3['!cols'] = [{ wch: 25 }, { wch: 15 }];
+        worksheet3['A1'].s = headerStyle;
+        worksheet3['B1'].s = headerStyle;
+        xlsx.utils.book_append_sheet(workbook, worksheet3, "Dashboard");
 
         const excelBuffer = xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' });
 
-        // 8. Send the file and a structured preview back to the client
-        const fileName = `Test_Cases_Dashboard_V6_${req.files[0].originalname.split('.')[0]}.xlsx`;
-        
-        // **NEW**: Create a structured preview
+        const fileName = `Test_Cases_Dashboard_${req.files[0].originalname.split('.')[0]}.xlsx`;
         const previewData = [];
-        const uniqueIds = Array.from(uniqueTestCases).slice(0, 3); // Preview first 3 unique test cases
+        const uniqueIds = Array.from(uniqueTestCases).slice(0, 3);
         uniqueIds.forEach(id => {
             const allStepsForId = finalTestCases.filter(tc => tc["Test Case ID"] === id);
             if (allStepsForId.length > 0) {
@@ -1199,7 +1178,7 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
             contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             preview: previewData
         });
-        console.log(`[${reqId}] Successfully generated and sent V6 test case file with dashboard and structured preview.`);
+        console.log(`[${reqId}] Successfully generated and sent test case file with dashboard.`);
 
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate-test-cases:`, error);
