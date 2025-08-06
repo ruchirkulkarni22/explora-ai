@@ -1,7 +1,7 @@
 // client/src/BrdGeneratorPage.js
 // This component now uses react-drawio instead of bpmn-js for a modern
 // and more powerful diagram editing experience.
-// CHANGE: Updated the "Edit" button text to be cleaner and more readable.
+// CHANGE: Implemented a new FileUploader component with drag-and-drop functionality.
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import axios from 'axios';
@@ -58,32 +58,87 @@ const DrawioEditor = ({ xml, onBack, diagramName }) => {
 
 
 // --- Helper UI Components ---
-const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => (
-    <div className="w-full max-w-2xl mx-auto">
-        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-2xl border-4 border-dashed border-gray-300 flex flex-col items-center justify-center p-12 transition-all hover:border-indigo-400">
-            <UploadCloud className="w-16 h-16 text-gray-400 mb-4" />
-            <span className="text-xl font-semibold text-gray-700">{selectedFiles.length > 0 ? "Add more files or generate" : "Click to upload your documents"}</span>
-            <p className="text-gray-500 mt-2">(.docx, .txt, .md)</p>
-        </label>
-        <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={(e) => onFileSelect(e.target.files)} accept=".docx,.txt,.md" />
 
-        {selectedFiles.length > 0 && (
-            <div className="mt-6">
-                <h4 className="font-semibold text-gray-700 text-center mb-3">Selected Files:</h4>
-                <ul className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded-lg">
-                    {selectedFiles.map((file, index) => (
-                        <li key={index} className="flex justify-between items-center bg-white p-2 rounded-md shadow-sm">
-                            <span className="text-gray-800 truncate pr-2">{file.name}</span>
-                            <button onClick={() => onFileRemove(index)} className="text-red-500 hover:text-red-700">
-                                <XCircle className="w-5 h-5" />
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        )}
-    </div>
-);
+// --- NEW: FileUploader with Drag and Drop ---
+const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
+    const [isDragging, setIsDragging] = useState(false);
+    const dragCounter = useRef(0);
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current++;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setIsDragging(true);
+        }
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current--;
+        if (dragCounter.current === 0) {
+            setIsDragging(false);
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        dragCounter.current = 0;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            onFileSelect(e.dataTransfer.files);
+            e.dataTransfer.clearData();
+        }
+    };
+    
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    return (
+        <div className="w-full max-w-2xl mx-auto">
+            <label 
+                htmlFor="file-upload" 
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                className={`relative cursor-pointer bg-white rounded-2xl border-4 border-dashed  flex flex-col items-center justify-center p-12 transition-all
+                    ${isDragging ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400'}`
+                }
+            >
+                <UploadCloud className={`w-16 h-16 mb-4 transition-colors ${isDragging ? 'text-indigo-600' : 'text-gray-400'}`} />
+                <span className={`text-xl font-semibold transition-colors ${isDragging ? 'text-indigo-800' : 'text-gray-700'}`}>
+                    {isDragging ? 'Drop files here' : (selectedFiles.length > 0 ? "Add more files or generate" : "Drag & drop files or click to upload")}
+                </span>
+                <p className={`mt-2 transition-colors ${isDragging ? 'text-indigo-500' : 'text-gray-500'}`}>
+                    (.docx, .txt, .md)
+                </p>
+            </label>
+            <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={(e) => onFileSelect(e.target.files)} accept=".docx,.txt,.md" />
+
+            {selectedFiles.length > 0 && (
+                <div className="mt-6">
+                    <h4 className="font-semibold text-gray-700 text-center mb-3">Selected Files:</h4>
+                    <ul className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded-lg">
+                        {selectedFiles.map((file, index) => (
+                            <li key={index} className="flex justify-between items-center bg-white p-2 rounded-md shadow-sm">
+                                <span className="text-gray-800 truncate pr-2">{file.name}</span>
+                                <button onClick={() => onFileRemove(index)} className="text-red-500 hover:text-red-700">
+                                    <XCircle className="w-5 h-5" />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const LoadingProgress = ({ progress, message }) => (
     <div className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto">
@@ -250,7 +305,12 @@ export default function BrdGeneratorPage({ onBack }) {
 
     const handleFileSelect = (files) => {
         if (files) {
-            setSelectedFiles(prevFiles => [...prevFiles, ...Array.from(files)]);
+            const newFiles = Array.from(files);
+            // Prevent duplicates
+            const uniqueNewFiles = newFiles.filter(newFile => 
+                !selectedFiles.some(existingFile => existingFile.name === newFile.name && existingFile.size === newFile.size)
+            );
+            setSelectedFiles(prevFiles => [...prevFiles, ...uniqueNewFiles]);
         }
     };
 

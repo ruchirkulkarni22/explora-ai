@@ -1,39 +1,93 @@
 // client/src/TestCaseGeneratorPage.js
 // This new component handles the UI and logic for the Test Case Generation feature.
-// **UPDATED** with a new "Test Case Card" preview for better UX.
+// CHANGE: Implemented a new FileUploader component with drag-and-drop functionality.
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { UploadCloud, ChevronLeft, AlertCircle, Sparkles, XCircle, Download, CheckCircle, Star, ListOrdered } from 'lucide-react';
 
 // --- Reusable Helper Components ---
 
-const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => (
-    <div className="w-full max-w-2xl mx-auto">
-        <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-2xl border-4 border-dashed border-gray-300 flex flex-col items-center justify-center p-12 transition-all hover:border-indigo-400">
-            <UploadCloud className="w-16 h-16 text-gray-400 mb-4" />
-            <span className="text-xl font-semibold text-gray-700">{selectedFiles.length > 0 ? "Add more files or generate" : "Click to upload your BRD"}</span>
-            <p className="text-gray-500 mt-2">(.docx, .txt, .md)</p>
-        </label>
-        <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={(e) => onFileSelect(e.target.files)} accept=".docx,.txt,.md" />
+// --- NEW: FileUploader with Drag and Drop ---
+const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
+    const [isDragging, setIsDragging] = useState(false);
+    const dragCounter = useRef(0);
+
+    const handleDragEnter = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current++;
+        if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+            setIsDragging(true);
+        }
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounter.current--;
+        if (dragCounter.current === 0) {
+            setIsDragging(false);
+        }
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragging(false);
+        dragCounter.current = 0;
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            onFileSelect(e.dataTransfer.files);
+            e.dataTransfer.clearData();
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    return (
+        <div className="w-full max-w-2xl mx-auto">
+            <label
+                htmlFor="file-upload"
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+                className={`relative cursor-pointer bg-white rounded-2xl border-4 border-dashed flex flex-col items-center justify-center p-12 transition-all
+                    ${isDragging ? 'border-indigo-600 bg-indigo-50' : 'border-gray-300 hover:border-indigo-400'}`
+                }
+            >
+                <UploadCloud className={`w-16 h-16 mb-4 transition-colors ${isDragging ? 'text-indigo-600' : 'text-gray-400'}`} />
+                <span className={`text-xl font-semibold transition-colors ${isDragging ? 'text-indigo-800' : 'text-gray-700'}`}>
+                    {isDragging ? 'Drop files here' : (selectedFiles.length > 0 ? "Add more files or generate" : "Drag & drop your BRD")}
+                </span>
+                <p className={`mt-2 transition-colors ${isDragging ? 'text-indigo-500' : 'text-gray-500'}`}>
+                    (.docx, .txt, .md)
+                </p>
+            </label>
+            <input id="file-upload" name="file-upload" type="file" className="sr-only" multiple onChange={(e) => onFileSelect(e.target.files)} accept=".docx,.txt,.md" />
         
-        {selectedFiles.length > 0 && (
-            <div className="mt-6">
-                <h4 className="font-semibold text-gray-700 text-center mb-3">Selected Files:</h4>
-                <ul className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded-lg">
-                    {selectedFiles.map((file, index) => (
-                        <li key={index} className="flex justify-between items-center bg-white p-2 rounded-md shadow-sm">
-                            <span className="text-gray-800 truncate pr-2">{file.name}</span>
-                            <button onClick={() => onFileRemove(index)} className="text-red-500 hover:text-red-700">
-                                <XCircle className="w-5 h-5" />
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        )}
-    </div>
-);
+            {selectedFiles.length > 0 && (
+                <div className="mt-6">
+                    <h4 className="font-semibold text-gray-700 text-center mb-3">Selected Files:</h4>
+                    <ul className="space-y-2 max-h-48 overflow-y-auto bg-gray-50 p-3 rounded-lg">
+                        {selectedFiles.map((file, index) => (
+                            <li key={index} className="flex justify-between items-center bg-white p-2 rounded-md shadow-sm">
+                                <span className="text-gray-800 truncate pr-2">{file.name}</span>
+                                <button onClick={() => onFileRemove(index)} className="text-red-500 hover:text-red-700">
+                                    <XCircle className="w-5 h-5" />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+};
+
 
 const LoadingSpinner = ({ message }) => (
     <div className="flex flex-col items-center justify-center text-center p-8">
@@ -142,7 +196,10 @@ export default function TestCaseGeneratorPage({ onBack }) {
     const handleFileSelect = (files) => {
         if (files) {
             const newFiles = Array.from(files);
-            const uniqueNewFiles = newFiles.filter(newFile => !selectedFiles.some(existingFile => existingFile.name === newFile.name));
+            // Prevent duplicates
+            const uniqueNewFiles = newFiles.filter(newFile => 
+                !selectedFiles.some(existingFile => existingFile.name === newFile.name && existingFile.size === newFile.size)
+            );
             setSelectedFiles(prevFiles => [...prevFiles, ...uniqueNewFiles]);
         }
     };
