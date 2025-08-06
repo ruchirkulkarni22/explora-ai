@@ -753,6 +753,7 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
     }
 
     try {
+        console.log(`[${reqId}] --- BRD GENERATION PROCESS STARTED ---`);
         const firstFile = req.files[0];
         const originalName = firstFile.originalname;
         const baseName = originalName.includes('.')
@@ -836,6 +837,7 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
         }
 
         console.log(`[${reqId}] Successfully generated all requested artifacts.`);
+        console.log(`[${reqId}] --- BRD GENERATION SUCCEEDED ---`);
         res.status(200).json(generatedResults);
 
     } catch (error) {
@@ -852,6 +854,7 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
     }
 
     try {
+        console.log(`[${reqId}] --- TEST CASE GENERATION PROCESS STARTED ---`);
         let combinedOriginalContent = '';
         for (const file of req.files) {
             const fileContent = await getFileContent(file);
@@ -997,6 +1000,7 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
             preview: previewData
         });
         console.log(`[${reqId}] Successfully generated and sent test case file with dashboard.`);
+        console.log(`[${reqId}] --- TEST CASE GENERATION SUCCEEDED ---`);
 
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate-test-cases:`, error);

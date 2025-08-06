@@ -40,7 +40,7 @@ export default function LandingPage({ onNavigate }) {
                 <Card 
                     icon={<FileText className="w-8 h-8 text-indigo-600" />} 
                     title="Create BRD & Process Flows" 
-                    description="Upload meeting notes or transcripts to generate a comprehensive BRD and BPMN 2.0 process diagrams." 
+                    description="Upload meeting notes or transcripts to generate a comprehensive BRD and process flow diagrams." 
                     enabled={true} 
                     onClick={() => onNavigate('brdGenerator')} 
                 />
