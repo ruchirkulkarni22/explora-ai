@@ -217,74 +217,52 @@ const BRD_MARKDOWN_TEMPLATE = `
 | [Approver Name] | [Role] | ____________________ |
 `;
 
-const PROCESS_TO_DRAWIO_XML_PROMPT = `You are a system that translates natural language process descriptions into a Draw.io XML format.
+const PROCESS_TO_DRAWIO_XML_PROMPT = `You are an expert system that converts business process descriptions into high-quality Draw.io XML flowcharts.
 
-**TASK:** Analyze the provided process description. Your entire output must be a single, valid Draw.io XML structure within a \`<mxfile>\` tag.
+PRIMARY GOAL:  
+Generate a clean, professional, and logically accurate flowchart that fully represents the described process. The output must be a single, valid Draw.io XML document.
 
-**RULES & GUIDELINES:**
-1.  **XML Only:** The entire response must be ONLY the XML, starting with \`<mxfile ...>\` and ending with \`</mxfile>\`. Do not wrap it in markdown or add explanations.
-2.  **Layout:** Create a clean, left-to-right flowchart. Use a grid layout. Increment X-coordinates for sequential steps. Use Y-coordinates to separate swimlanes or decision branches. A good starting point is x="40", y="40". A good increment is 160 for x and 120 for y.
-3.  **Elements:**
-    * **Start Event:** Use an ellipse: \`style="ellipse;..."\`
-    * **End Event:** Use an ellipse with a thick border: \`style="ellipse;strokeWidth=2;..."\`
-    * **Task/Activity:** Use a rectangle: \`style="rounded=1;whiteSpace=wrap;html=1;"\`
-    * **Decision/Gateway:** Use a rhombus: \`style="rhombus;whiteSpace=wrap;html=1;"\`
-4.  **Connectors:** Use \`mxICell\` for connectors, specifying the \`source\` and \`target\` attribute with the \`id\` of the shapes. Add labels to connectors originating from a decision gateway (e.g., "Yes", "No").
-5.  **IDs:** Each element (\`mxCell\`) must have a unique \`id\`. Start with \`id="0"\` and \`id="1"\` for the default parent layers. Your first visible element should have \`id="2"\`.
-6.  **Swimlanes:** If actors/roles are mentioned (e.g., "Customer," "System"), create horizontal swimlanes. A swimlane is a large rectangle shape. Place the process steps for that actor inside their respective swimlane.
-7.  **Professionalism:** Use concise, professional, verb-first labels for tasks.
+RULES:
 
-**EXAMPLE:**
-Process Description: "The customer submits an order. The system checks if the item is in stock. If it is, the system processes the payment. If not, it notifies the customer that the item is backordered. The process ends after payment or notification."
+1. XML ONLY:  
+Your response must contain only valid Draw.io XML. It must begin with <mxfile> and end with </mxfile>. Do not include any other text, markdown, or commentary.
 
-**PERFECT XML OUTPUT:**
-<mxfile host="app.diagrams.net" modified="2023-10-27T12:00:00.000Z" agent="5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36" etag="m_aIeLpWOa_k32-32pWq" version="22.0.8" type="device">
-  <diagram name="Page-1" id="uniqueDiagramId">
-    <mxGraphModel dx="1434" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
-      <root>
-        <mxCell id="0" />
-        <mxCell id="1" parent="0" />
-        <mxCell id="swimlane1" value="Customer" style="swimlane;startSize=23;" parent="1" vertex="1">
-          <mxGeometry x="20" y="20" width="760" height="140" as="geometry" />
-        </mxCell>
-        <mxCell id="2" value="Order Submitted" style="ellipse;whiteSpace=wrap;html=1;" parent="swimlane1" vertex="1">
-          <mxGeometry x="40" y="50" width="120" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="swimlane2" value="System" style="swimlane;startSize=23;" parent="1" vertex="1">
-          <mxGeometry x="20" y="160" width="760" height="240" as="geometry" />
-        </mxCell>
-        <mxCell id="3" value="Check Stock Availability" style="rhombus;whiteSpace=wrap;html=1;" parent="swimlane2" vertex="1">
-          <mxGeometry x="220" y="50" width="120" height="120" as="geometry" />
-        </mxCell>
-        <mxCell id="4" value="Process Payment" style="rounded=1;whiteSpace=wrap;html=1;" parent="swimlane2" vertex="1">
-          <mxGeometry x="420" y="40" width="120" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="5" value="Notify Customer of Backorder" style="rounded=1;whiteSpace=wrap;html=1;" parent="swimlane2" vertex="1">
-          <mxGeometry x="420" y="140" width="120" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="6" value="Process Complete" style="ellipse;whiteSpace=wrap;html=1;strokeWidth=2;" parent="swimlane2" vertex="1">
-          <mxGeometry x="620" y="90" width="120" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="2" target="3" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="8" value="In Stock" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="3" target="4" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="9" value="Out of Stock" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="3" target="5" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="4" target="6" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="11" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="5" target="6" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-      </root>
-    </mxGraphModel>
-  </diagram>
-</mxfile>
-`;
+2. USE ONLY GIVEN CONTENT:  
+Strictly follow the process description provided. Do not add steps, assumptions, or inferred logic.
+
+3. USE SWIMLANES ONLY WHERE NEEDED:  
+Create swimlanes only if different roles or departments are explicitly mentioned. If all actions belong to the same actor, do not include swimlanes.
+
+4. AVOID DUPLICATION:  
+Do not create multiple nodes for the same logical step. Ensure each action or decision appears only once in the flow.
+
+5. KEEP IT SIMPLE AND HIGH QUALITY:  
+The flowchart must be clear, professional, and free from unnecessary or redundant elements.
+
+TECHNICAL GUIDELINES:
+
+- Layout:  
+  Use a grid layout, arranged top-to-bottom or left-to-right.  
+  Start at x=40 and y=40. Use consistent spacing (e.g., 160 units horizontally and 120 units vertically).
+
+- Shapes:  
+  Start Event: Ellipse with style="ellipse;..."  
+  End Event: Ellipse with thick border, style="ellipse;strokeWidth=2;..."  
+  Task/Activity: Rounded rectangle, style="rounded=1;whiteSpace=wrap;html=1;"  
+  Decision/Gateway: Rhombus, style="rhombus;whiteSpace=wrap;html=1;"  
+  Swimlane: style="swimlane;" — only if roles are explicitly mentioned
+
+- Connectors:  
+  Use arrows to link all steps. Label outgoing paths from decision nodes (e.g., Yes, No) clearly.
+
+- IDs:  
+  Each element must have a unique id. Use id=0 and id=1 for default layers. First visible shape should begin at id=2.
+
+EXAMPLE INPUT:  
+The user fills out a registration form. After submitting, the system checks if the email is valid. If valid, an account is created and the process ends. If invalid, an error is shown, and the user is returned to the form.
+
+EXPECTED OUTPUT:  
+A complete Draw.io XML structure representing this process.`;
 
 
 // Prompt to intelligently extract a section from a document
@@ -742,7 +720,7 @@ const anonymizeText = async (text) => {
 
 app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
     const reqId = uuidv4().slice(0, 8);
-    console.log(`[${reqId}] Received request for /api/generate with ${req.files.length} file(s).`);
+    console.log(`[${reqId}] Received request for /api/generate-brd with ${req.files.length} file(s).`);
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No files uploaded.' });
 
     let requestedArtifacts;
@@ -799,14 +777,24 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
             const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
             const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
             const drawioXml = await generateDrawioXmlFromProcessDescription(sanitizedAsIsText, executiveSummary);
-            generatedResults.asisFlow = { type: 'drawio', fileName: `${baseName}_As_Is_Flow.drawio`, content: drawioXml, contentType: 'application/xml' };
+            let finalAsIsXml = drawioXml;
+            for (let [code, original] of masterMapping.entries()) {
+                const regex = new RegExp(escapeRegExp(code), 'g');
+                finalAsIsXml = finalAsIsXml.replace(regex, original);
+            }
+            generatedResults.asisFlow = { type: 'drawio', fileName: `${baseName}_As_Is_Flow.drawio`, content: finalAsIsXml, contentType: 'application/xml' };
         }
         if (requestedArtifacts.includes('tobeFlow') && brdText) {
             console.log(`[${reqId}] Generating To-Be Flow...`);
             const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
             const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
             const drawioXml = await generateDrawioXmlFromProcessDescription(sanitizedToBeText, executiveSummary);
-            generatedResults.tobeFlow = { type: 'drawio', fileName: `${baseName}_To_Be_Flow.drawio`, content: drawioXml, contentType: 'application/xml' };
+            let finalToBeXml = drawioXml;
+            for (let [code, original] of masterMapping.entries()) {
+                const regex = new RegExp(escapeRegExp(code), 'g');
+                finalToBeXml = finalToBeXml.replace(regex, original);
+            }
+            generatedResults.tobeFlow = { type: 'drawio', fileName: `${baseName}_To_Be_Flow.drawio`, content: finalToBeXml, contentType: 'application/xml' };
         }
 
         if (requestedArtifacts.includes('anonymized')) {
