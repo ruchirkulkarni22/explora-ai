@@ -276,7 +276,7 @@ export default function TestCaseGeneratorPage({ onBack }) {
                     <button 
                         onClick={handleSubmit} 
                         disabled={selectedFiles.length === 0} 
-                        className="bg-indigo-600 text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 flex items-center justify-center mx-auto"
+                        className="bg-[#13294B] text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-[#1C4A50] transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 flex items-center justify-center mx-auto"
                     >
                         <Sparkles className="w-6 h-6 mr-3" />
                         Generate Test Cases
@@ -292,7 +292,7 @@ export default function TestCaseGeneratorPage({ onBack }) {
                 <ChevronLeft className="w-5 h-5 mr-2" />Back to Home
             </button>
             <div className="text-center mb-12">
-                <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 mb-3">Test Case Generation</h1>
+                <h1 className="text-4xl md:text-5xl font-extrabold text-[#13294B] mb-3">Test Case Generation</h1>
                 <p className="text-lg text-gray-500 max-w-3xl mx-auto">Upload a Business Requirements Document (BRD) to automatically generate test cases in an Excel format.</p>
             </div>
             {renderContent()}

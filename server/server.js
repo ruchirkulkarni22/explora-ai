@@ -4,6 +4,8 @@
 // QUALITY UPGRADE: Implemented a structured JSON-first approach and a more advanced
 // layout algorithm for cleaner, more professional diagrams.
 
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -217,52 +219,29 @@ const BRD_MARKDOWN_TEMPLATE = `
 | [Approver Name] | [Role] | ____________________ |
 `;
 
-const PROCESS_TO_DRAWIO_XML_PROMPT = `You are an expert system that converts business process descriptions into high-quality Draw.io XML flowcharts.
+const PROCESS_TO_DRAWIO_XML_PROMPT = `You are an expert system that converts a business process description into a high-quality, simple, and clean Draw.io XML flowchart.
 
-PRIMARY GOAL:  
-Generate a clean, professional, and logically accurate flowchart that fully represents the described process. The output must be a single, valid Draw.io XML document.
+**PRIMARY GOAL:**
+Your task is to create a high-quality, logical, and easy-to-follow flowchart that accurately represents the ENTIRE process described in the provided text. The output must be a single, valid Draw.io XML structure.
 
-RULES:
+**CRITICAL RULES:**
+1.  **XML ONLY:** Your entire response MUST be the XML code. Start with \`<mxfile ...>\` and end with \`</mxfile>\`. Do not include any other text, explanations, or markdown formatting.
+2.  **STRICTLY ADHERE TO TEXT:** Base the flowchart ONLY on the provided process description. Do not invent steps or add information not present in the text.
+3.  **INTELLIGENT SWIMLANES:** Use swimlanes ONLY if the process description explicitly mentions **more than one** distinct role, department, or system performing actions (e.g., 'Customer' submits, then 'System' validates). If the process describes actions by a single entity or doesn't specify roles, DO NOT use swimlanes.
+4.  **NO DUPLICATION:** Never create duplicate nodes or nodes with synonymous meanings (e.g., "Submit Form" and "Form is Submitted"). Each step should be a unique node.
+5.  **SHAPE AND TEXT FITTING:** Ensure text fits within shapes by using the style \`whiteSpace=wrap;html=1;\`. Make the shapes large enough to comfortably contain the text.
+6.  **ERROR HANDLING:** If the provided text is too short, ambiguous, or completely insufficient to create a meaningful flowchart, you MUST return the following specific error XML and nothing else:
+    \`<mxfile><diagram><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="Error: Insufficient content to generate a diagram." style="text;align=center;verticalAlign=middle;fillColor=#f8d7da;strokeColor=#721c24;fontColor=#721c24;rounded=1;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="240" height="60" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>\`
 
-1. XML ONLY:  
-Your response must contain only valid Draw.io XML. It must begin with <mxfile> and end with </mxfile>. Do not include any other text, markdown, or commentary.
-
-2. USE ONLY GIVEN CONTENT:  
-Strictly follow the process description provided. Do not add steps, assumptions, or inferred logic.
-
-3. USE SWIMLANES ONLY WHERE NEEDED:  
-Create swimlanes only if different roles or departments are explicitly mentioned. If all actions belong to the same actor, do not include swimlanes.
-
-4. AVOID DUPLICATION:  
-Do not create multiple nodes for the same logical step. Ensure each action or decision appears only once in the flow.
-
-5. KEEP IT SIMPLE AND HIGH QUALITY:  
-The flowchart must be clear, professional, and free from unnecessary or redundant elements.
-
-TECHNICAL GUIDELINES:
-
-- Layout:  
-  Use a grid layout, arranged top-to-bottom or left-to-right.  
-  Start at x=40 and y=40. Use consistent spacing (e.g., 160 units horizontally and 120 units vertically).
-
-- Shapes:  
-  Start Event: Ellipse with style="ellipse;..."  
-  End Event: Ellipse with thick border, style="ellipse;strokeWidth=2;..."  
-  Task/Activity: Rounded rectangle, style="rounded=1;whiteSpace=wrap;html=1;"  
-  Decision/Gateway: Rhombus, style="rhombus;whiteSpace=wrap;html=1;"  
-  Swimlane: style="swimlane;" — only if roles are explicitly mentioned
-
-- Connectors:  
-  Use arrows to link all steps. Label outgoing paths from decision nodes (e.g., Yes, No) clearly.
-
-- IDs:  
-  Each element must have a unique id. Use id=0 and id=1 for default layers. First visible shape should begin at id=2.
-
-EXAMPLE INPUT:  
-The user fills out a registration form. After submitting, the system checks if the email is valid. If valid, an account is created and the process ends. If invalid, an error is shown, and the user is returned to the form.
-
-EXPECTED OUTPUT:  
-A complete Draw.io XML structure representing this process.`;
+**TECHNICAL GUIDELINES:**
+* **Layout:** Arrange the flowchart in a clean top-to-bottom or left-to-right sequence. Use a grid layout. A good starting point for the first element is x="40", y="40". Use an increment of at least 160 for x or 120 for y.
+* **Elements:**
+    * **Start Event:** Ellipse (\`style="ellipse;..."\`)
+    * **End Event:** Ellipse with a thick border (\`style="ellipse;strokeWidth=2;..."\`)
+    * **Task/Activity:** Rectangle (\`style="rounded=1;whiteSpace=wrap;html=1;"\`)
+    * **Decision/Gateway:** Rhombus (\`style="rhombus;whiteSpace=wrap;html=1;"\`)
+* **Connectors:** Use arrows to connect elements logically. Label connectors from a decision gateway (e.g., "Yes", "No").
+* **IDs:** Each element (\`mxCell\`) must have a unique \`id\`, starting from \`id="2"\` for the first visible element.`;
 
 
 // Prompt to intelligently extract a section from a document
@@ -511,6 +490,45 @@ const parseInlineFormatting = (line) => {
     return runs;
 };
 
+// --- NEW: Helper function to save reference archive locally ---
+const saveReferenceArchive = async (baseName, reqId, anonymizedContent, mapping) => {
+    const referencePath = '/Users/ruchirkulkarni/Library/CloudStorage/OneDrive-CalfusTechnologiesIndiaPrivateLimited/ERP Codes/ExploraAI/Reference_Docs';
+    
+    try {
+        // Ensure the directory exists, creating it if it doesn't
+        if (!fs.existsSync(referencePath)) {
+            fs.mkdirSync(referencePath, { recursive: true });
+            console.log(`[${reqId}] Created reference directory at: ${referencePath}`);
+        }
+
+        // Create the content for the redaction key CSV file
+        let csvContent = "Code,Original_Entity\n";
+        for (let [code, original] of mapping.entries()) {
+            csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
+        }
+
+        // Create a new zip archive in memory
+        const zip = new jszip();
+        zip.file('anonymized_content.txt', anonymizedContent);
+        zip.file('redaction_key.csv', csvContent);
+
+        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+
+        // Create a unique filename using the original name and a precise timestamp
+        const timestamp = new Date().toISOString().replace(/:/g, '.');
+        const fileName = `${baseName}_Reference_${timestamp}.zip`;
+        const fullPath = path.join(referencePath, fileName);
+
+        // Write the zip file to your local disk
+        fs.writeFileSync(fullPath, zipBuffer);
+        console.log(`[${reqId}] Successfully saved reference archive to: ${fullPath}`);
+
+    } catch (error) {
+        // Log an error if saving fails, but don't stop the main process
+        console.error(`[${reqId}] FAILED to save reference archive. Error: ${error.message}`);
+    }
+};
+
 
 // ===================================================================================
 // --- AI Model Adapters ---
@@ -747,6 +765,7 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
 
         console.log(`[${reqId}] Creating master entity map from all documents...`);
         const { anonymizedText: anonymizedCombinedContent, mapping: masterMapping } = await anonymizeText(combinedOriginalContent);
+        await saveReferenceArchive(baseName, reqId, anonymizedCombinedContent, masterMapping);
 
         const generatedResults = {};
         let brdText = '';
@@ -851,6 +870,8 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
 
         console.log(`[${reqId}] Anonymizing document content...`);
         const { anonymizedText, mapping } = await anonymizeText(combinedOriginalContent);
+        const baseName = req.files[0].originalname.split('.')[0];
+        await saveReferenceArchive(baseName, reqId, anonymizedText, mapping);
 
         console.log(`[${reqId}] Calling AI with V3 prompt to generate test cases...`);
         const userPromptForAI = `Here is the BRD content. Please generate test cases based on it:\n\n${anonymizedText}`;
