@@ -387,9 +387,9 @@ Begin now. Output only the final JSON array of test steps. If no valid steps can
 // configuration settings for AI providers
 const aiConfig = {
     entityExtractionProvider: 'spacy',
-    brdGenerationProvider: 'openrouter',
-    flowGenerationProvider: 'openrouter',
-    sectionExtractionProvider: 'openrouter',
+    brdGenerationProvider: 'gemini',
+    flowGenerationProvider: 'gemini',
+    sectionExtractionProvider: 'gemini',
     testCaseGenerationProvider: 'gemini',
 
     gemini: {
