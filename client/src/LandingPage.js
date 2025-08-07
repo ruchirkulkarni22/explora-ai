@@ -1,16 +1,17 @@
 // client/src/LandingPage.js
-// This new component displays the main landing page with the feature cards.
+// This component displays the main landing page with the feature cards.
+// UPDATE: The third card for "Build Training Decks" is now enabled and functional.
 
 import React from 'react';
 import { FileText, TestTube2, Presentation } from 'lucide-react';
 
 // Reusable Card component for the landing page
 const Card = ({ icon, title, description, enabled = false, onClick }) => (
-    <div 
-        onClick={enabled ? onClick : null} 
+    <div
+        onClick={enabled ? onClick : null}
         className={`bg-white rounded-2xl p-8 shadow-lg transition-all duration-300 ease-in-out transform ${
-            enabled 
-            ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-2 border-2 border-transparent hover:border-[#006BA6]' 
+            enabled
+            ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-2 border-2 border-transparent hover:border-[#006BA6]'
             : 'opacity-50 cursor-not-allowed'
         }`}
     >
@@ -37,25 +38,26 @@ export default function LandingPage({ onNavigate }) {
                 Your AI-powered assistant for transforming project inputs into structured, actionable documents with a focus on privacy.
             </p>
             <div className="grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-                <Card 
-                    icon={<FileText className="w-8 h-8 text-[#13294B]" />} 
-                    title="Create BRD & Process Flows" 
-                    description="Upload meeting notes or transcripts to generate a comprehensive BRD and process flow diagrams." 
-                    enabled={true} 
-                    onClick={() => onNavigate('brdGenerator')} 
+                <Card
+                    icon={<FileText className="w-8 h-8 text-[#13294B]" />}
+                    title="Create BRD & Process Flows"
+                    description="Upload meeting notes or transcripts to generate a comprehensive BRD and process flow diagrams."
+                    enabled={true}
+                    onClick={() => onNavigate('brdGenerator')}
                 />
-                <Card 
-                    icon={<TestTube2 className="w-8 h-8 text-[#1C4A50]" />} 
-                    title="Generate Test Cases" 
-                    description="Analyze a BRD to automatically generate detailed test case scenarios in an Excel file." 
-                    enabled={true} 
+                <Card
+                    icon={<TestTube2 className="w-8 h-8 text-[#1C4A50]" />}
+                    title="Generate Test Cases"
+                    description="Analyze a BRD to automatically generate detailed test case scenarios in an Excel file."
+                    enabled={true}
                     onClick={() => onNavigate('testCaseGenerator')}
                 />
-                <Card 
-                    icon={<Presentation className="w-8 h-8 text-[#33000D]" />} 
-                    title="Build Training Decks" 
-                    description="Provide project documents to instantly create a professional PowerPoint presentation." 
-                    enabled={false} 
+                <Card
+                    icon={<Presentation className="w-8 h-8 text-[#33000D]" />}
+                    title="Build Training Decks"
+                    description="Upload a test case sheet to find the most relevant training PowerPoint presentations from your knowledge base."
+                    enabled={true} // UPDATED: This feature is now enabled.
+                    onClick={() => onNavigate('trainingDeckGenerator')} // UPDATED: This now navigates to the new page.
                 />
             </div>
         </div>

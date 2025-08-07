@@ -5,3 +5,5 @@ server/node_modules/
 # Ignore server build artifacts
 server/latest_server.js
 server/venv
+server/Knowledge_Repository/
+server/temp_downloads/

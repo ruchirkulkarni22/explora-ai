@@ -31,6 +31,41 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit per file
 });
 
+// NEW: Serve temporary files for direct download
+const TEMP_DOWNLOAD_DIR = path.join(__dirname, 'temp_downloads');
+if (!fs.existsSync(TEMP_DOWNLOAD_DIR)){
+    fs.mkdirSync(TEMP_DOWNLOAD_DIR);
+}
+app.use('/downloads', express.static(TEMP_DOWNLOAD_DIR));
+
+// NEW: Cleanup job to delete old temporary files
+const CLEANUP_INTERVAL_MS = 60 * 1000; // 1 Minute
+setInterval(() => {
+    fs.readdir(TEMP_DOWNLOAD_DIR, (err, files) => {
+        if (err) {
+            console.error("Failed to read temp directory for cleanup:", err);
+            return;
+        }
+        files.forEach(file => {
+            const filePath = path.join(TEMP_DOWNLOAD_DIR, file);
+            fs.stat(filePath, (err, stats) => {
+                if (err) {
+                    console.error(`Failed to get stats for file ${file}:`, err);
+                    return;
+                }
+                const now = new Date().getTime();
+                const fileAge = now - new Date(stats.mtime).getTime();
+                if (fileAge > CLEANUP_INTERVAL_MS) {
+                    fs.unlink(filePath, err => {
+                        if (err) console.error(`Failed to delete old temp file ${file}:`, err);
+                        else console.log(`Cleaned up old temp file: ${file}`);
+                    });
+                }
+            });
+        });
+    });
+}, CLEANUP_INTERVAL_MS);
+
 // ===================================================================================
 // --- Prompts and Configurations ---
 // ===================================================================================
@@ -364,6 +399,10 @@ const aiConfig = {
     spacy: {
         pythonPath: 'python3',
         scriptPath: 'ner_spacy.py'
+    },
+    pptAnalyzer: {
+        pythonPath: 'python3', // or the path to your python executable inside the venv
+        scriptPath: 'ppt_analyzer.py'
     }
 };
 
@@ -1014,6 +1053,94 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate-test-cases:`, error);
         res.status(500).json({ error: error.message || "An unknown server error occurred." });
+    }
+});
+
+// --- UPDATED ENDPOINT FOR FEATURE 3: NOW RETURNS A DOWNLOAD URL ---
+app.post('/api/generate-training-deck', upload.single('file'), async (req, res) => {
+    const reqId = uuidv4().slice(0, 8);
+    console.log(`[${reqId}] Received request for /api/generate-training-deck.`);
+
+    if (!req.file) return res.status(400).json({ error: 'No Excel file uploaded.' });
+    if (req.file.mimetype !== 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+        return res.status(400).json({ error: 'Invalid file type. Please upload a .xlsx file.' });
+    }
+
+    try {
+        console.log(`[${reqId}] --- TRAINING DECK ANALYSIS STARTED ---`);
+        const { pythonPath, scriptPath } = aiConfig.pptAnalyzer;
+        const knowledgeRepoPath = path.join(__dirname, 'Knowledge_Repository');
+
+        if (!fs.existsSync(knowledgeRepoPath)) throw new Error("Knowledge_Repository folder not found.");
+        const pptFiles = fs.readdirSync(knowledgeRepoPath).filter(f => f.endsWith('.pptx'));
+        if (pptFiles.length === 0) throw new Error("No PowerPoint files found in Knowledge_Repository.");
+
+        const pythonProcess = spawn(pythonPath, [scriptPath, knowledgeRepoPath]);
+        let scriptOutput = '', scriptError = '';
+        pythonProcess.stdout.on('data', (data) => { scriptOutput += data.toString(); });
+        pythonProcess.stderr.on('data', (data) => { scriptError += data.toString(); });
+
+        pythonProcess.on('close', async (code) => {
+            if (code !== 0) {
+                console.error(`[${reqId}] Python script error: ${scriptError}`);
+                return res.status(500).json({ error: `Analysis failed: ${scriptError}` });
+            }
+
+            try {
+                console.log(`[${reqId}] Python script finished. Creating zip archive.`);
+                const results = JSON.parse(scriptOutput);
+                const matchedPptFiles = [...new Set(results.map(item => item['Matched PPT']))].filter(f => f !== "No relevant deck found");
+
+                if (matchedPptFiles.length === 0) {
+                    // If no matches, we can still send back just the report
+                    console.log(`[${reqId}] No confident matches found. Generating report only.`);
+                }
+
+                const zip = new jszip();
+                for (const pptFile of matchedPptFiles) {
+                    const filePath = path.join(knowledgeRepoPath, pptFile);
+                    if (fs.existsSync(filePath)) {
+                        zip.file(pptFile, fs.readFileSync(filePath));
+                    }
+                }
+                
+                const workbook = xlsx.utils.book_new();
+                const worksheet = xlsx.utils.json_to_sheet(results);
+                worksheet['!cols'] = [ { wch: 15 }, { wch: 50 }, { wch: 40 }, { wch: 15 }, { wch: 20 }, { wch: 50 } ];
+                xlsx.utils.book_append_sheet(workbook, worksheet, "PPT Matching Report");
+                zip.file("Matching_Report.xlsx", xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' }));
+
+                const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+                
+                const originalName = req.file.originalname.replace('.xlsx', '');
+                const uniqueId = uuidv4().slice(0,8);
+                const fileName = `Matched_Decks_${originalName}_${uniqueId}.zip`;
+                const tempFilePath = path.join(TEMP_DOWNLOAD_DIR, fileName);
+
+                // Save the file to the temporary directory
+                fs.writeFileSync(tempFilePath, zipBuffer);
+
+                // Respond with the URL to the file
+                const downloadUrl = `http://localhost:${port}/downloads/${fileName}`;
+                
+                res.status(200).json({
+                    downloadUrl: downloadUrl,
+                    fileName: fileName
+                });
+                console.log(`[${reqId}] --- TRAINING DECK ANALYSIS SUCCEEDED ---`);
+
+            } catch (e) {
+                console.error(`[${reqId}] Error creating zip file:`, e);
+                res.status(500).json({ error: "Failed to create the deliverable." });
+            }
+        });
+
+        pythonProcess.stdin.write(req.file.buffer);
+        pythonProcess.stdin.end();
+
+    } catch (error) {
+        console.error(`[${reqId}] Error in /api/generate-training-deck:`, error);
+        res.status(500).json({ error: error.message });
     }
 });
 
