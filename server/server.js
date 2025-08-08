@@ -791,7 +791,7 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
     }
 
     try {
-        console.log(`[${reqId}] --- BRD GENERATION PROCESS STARTED ---`);
+        console.log(`[${reqId}] --- BRD & PROCESS FLOW GENERATION PROCESS STARTED ---`);
         const firstFile = req.files[0];
         const originalName = firstFile.originalname;
         const baseName = originalName.includes('.')
@@ -817,6 +817,12 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
         if (needsBrd) {
             console.log(`[${reqId}] Generating unified BRD from anonymized content...`);
             brdText = await generateBRD(anonymizedCombinedContent);
+            // **FIX**: De-anonymize the BRD text immediately after generation
+            console.log(`[${reqId}] De-anonymizing master BRD text...`);
+            for (let [code, original] of masterMapping.entries()) {
+                const regex = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g');
+                brdText = brdText.replace(regex, original);
+            }
             executiveSummary = await extractSectionWithAI(brdText, "Executive Summary");
 
             if (requestedArtifacts.includes('brd')) {
@@ -879,7 +885,7 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
         console.log(`[${reqId}] All parallel flow generations have completed.`);
 
         console.log(`[${reqId}] Successfully generated all requested artifacts.`);
-        console.log(`[${reqId}] --- BRD GENERATION SUCCEEDED ---`);
+        console.log(`[${reqId}] --- BRD & PROCESS FLOW GENERATION SUCCEEDED ---`);
         res.status(200).json({ reqId, artifacts: generatedResults });
 
     } catch (error) {
