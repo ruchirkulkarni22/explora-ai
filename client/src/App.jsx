@@ -1,33 +1,24 @@
-// client/src/App.js
-// This file now acts as a simple router, controlling which page is displayed.
-// This improves modularity and makes the project easier to manage.
-// UPDATE: Added 'trainingDeckGenerator' to the navigation logic.
-
+// clientVite/src/App.jsx
 import React, { useState } from 'react';
-import LandingPage from './LandingPage';
-import BrdGeneratorPage from './BrdGeneratorPage';
-import TestCaseGeneratorPage from './TestCaseGeneratorPage';
-import TrainingDeckGeneratorPage from './TrainingDeckGeneratorPage'; // NEW IMPORT
+import LandingPage from './LandingPage.jsx';
+import BrdGeneratorPage from './BrdGeneratorPage.jsx';
+import TestCaseGeneratorPage from './TestCaseGeneratorPage.jsx';
+import TrainingDeckGeneratorPage from './TrainingDeckGeneratorPage.jsx';
 import './App.css';
 
 export default function App() {
-    // State to control which page is visible.
-    // 'landing', 'brdGenerator', 'testCaseGenerator', 'trainingDeckGenerator'
     const [page, setPage] = useState('landing');
 
-    // Function to navigate between pages, passed down as a prop.
     const navigateTo = (pageName) => {
         setPage(pageName);
     };
 
-    // Render the correct page component based on the current state.
     const renderContent = () => {
         switch (page) {
             case 'brdGenerator':
                 return <BrdGeneratorPage onBack={() => navigateTo('landing')} />;
             case 'testCaseGenerator':
                 return <TestCaseGeneratorPage onBack={() => navigateTo('landing')} />;
-            // NEW CASE for the third feature
             case 'trainingDeckGenerator':
                 return <TrainingDeckGeneratorPage onBack={() => navigateTo('landing')} />;
             case 'landing':

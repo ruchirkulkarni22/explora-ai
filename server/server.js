@@ -3,6 +3,8 @@
 // enabling in-browser editing with bpmn-js on the frontend.
 // QUALITY UPGRADE: Implemented a structured JSON-first approach and a more advanced
 // layout algorithm for cleaner, more professional diagrams.
+// NEW: Added a fallback mechanism to ask for more details if process descriptions are insufficient.
+// OPTIMIZATION: Process flow generation (As-Is & To-Be) now runs in parallel to reduce waiting time.
 
 const fs = require('fs');
 const path = require('path');
@@ -39,7 +41,7 @@ if (!fs.existsSync(TEMP_DOWNLOAD_DIR)){
 app.use('/downloads', express.static(TEMP_DOWNLOAD_DIR));
 
 // NEW: Cleanup job to delete old temporary files
-const CLEANUP_INTERVAL_MS = 60 * 1000; // 1 Minute
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 Hour
 setInterval(() => {
     fs.readdir(TEMP_DOWNLOAD_DIR, (err, files) => {
         if (err) {
@@ -534,37 +536,32 @@ const saveReferenceArchive = async (baseName, reqId, anonymizedContent, mapping)
     const referencePath = '/Users/ruchirkulkarni/Library/CloudStorage/OneDrive-CalfusTechnologiesIndiaPrivateLimited/ERP Codes/ExploraAI/Reference_Docs';
     
     try {
-        // Ensure the directory exists, creating it if it doesn't
         if (!fs.existsSync(referencePath)) {
             fs.mkdirSync(referencePath, { recursive: true });
             console.log(`[${reqId}] Created reference directory at: ${referencePath}`);
         }
 
-        // Create the content for the redaction key CSV file
         let csvContent = "Code,Original_Entity\n";
         for (let [code, original] of mapping.entries()) {
             csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
         }
 
-        // Create a new zip archive in memory
         const zip = new jszip();
         zip.file('anonymized_content.txt', anonymizedContent);
         zip.file('redaction_key.csv', csvContent);
 
         const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-
-        // Create a unique filename using the original name and a precise timestamp
-        const timestamp = new Date().toISOString().replace(/:/g, '.');
-        const fileName = `${baseName}_Reference_${timestamp}.zip`;
+        
+        // **CHANGE**: Use reqId in the filename for easy retrieval
+        const fileName = `${baseName}_Reference_${reqId}.zip`;
         const fullPath = path.join(referencePath, fileName);
 
-        // Write the zip file to your local disk
         fs.writeFileSync(fullPath, zipBuffer);
         console.log(`[${reqId}] Successfully saved reference archive to: ${fullPath}`);
-
+        return fileName; // Return the filename for reference
     } catch (error) {
-        // Log an error if saving fails, but don't stop the main process
         console.error(`[${reqId}] FAILED to save reference archive. Error: ${error.message}`);
+        return null;
     }
 };
 
@@ -704,12 +701,18 @@ const generateDrawioXmlFromProcessDescription = async (processDescription, conte
         rawResponse = await generateWithChatCompletionAdapter(provider, null, fullPrompt);
     }
 
-    // Clean the response to ensure it's valid XML
-    const cleanedResponse = rawResponse.replace(/```xml/g, '').replace(/```/g, '').trim();
+    const xmlMatch = rawResponse.match(/<mxfile[\s\S]*?<\/mxfile>/);
+    const cleanedResponse = xmlMatch ? xmlMatch[0] : '';
+    
+    if (!cleanedResponse) {
+        console.error("[ERROR] AI response for Draw.io XML did not contain a valid <mxfile> block. Raw response:", rawResponse);
+        throw new Error("The AI failed to return a parsable Draw.io XML structure.");
+    }
 
-    if (!cleanedResponse.startsWith('<mxfile')) {
-        console.error("[ERROR] AI response for Draw.io XML is not valid:", cleanedResponse);
-        throw new Error("The AI failed to generate a valid Draw.io XML structure.");
+    // **CHANGE**: Check for insufficient content and return a special object instead of throwing an error.
+    if (cleanedResponse.includes("Error: Insufficient content to generate a diagram.")) {
+        console.warn("[WARN] AI determined the input text was insufficient for diagram generation.");
+        return { error: "insufficient_content", message: "The process description was not detailed enough to create a flowchart." };
     }
 
     return cleanedResponse;
@@ -814,8 +817,6 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
         if (needsBrd) {
             console.log(`[${reqId}] Generating unified BRD from anonymized content...`);
             brdText = await generateBRD(anonymizedCombinedContent);
-
-            // Extract summary for context
             executiveSummary = await extractSectionWithAI(brdText, "Executive Summary");
 
             if (requestedArtifacts.includes('brd')) {
@@ -830,67 +831,130 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
             }
         }
 
+        // **OPTIMIZATION**: Run As-Is and To-Be flow generation in parallel
+        const flowPromises = [];
+
         if (requestedArtifacts.includes('asisFlow') && brdText) {
-            console.log(`[${reqId}] Generating As-Is Flow...`);
+            console.log(`[${reqId}] Starting As-Is Flow generation...`);
             const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
             const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
-            const drawioXml = await generateDrawioXmlFromProcessDescription(sanitizedAsIsText, executiveSummary);
-            let finalAsIsXml = drawioXml;
-            for (let [code, original] of masterMapping.entries()) {
-                const regex = new RegExp(escapeRegExp(code), 'g');
-                finalAsIsXml = finalAsIsXml.replace(regex, original);
-            }
-            generatedResults.asisFlow = { type: 'drawio', fileName: `${baseName}_As_Is_Flow.drawio`, content: finalAsIsXml, contentType: 'application/xml' };
+            
+            flowPromises.push(
+                generateDrawioXmlFromProcessDescription(sanitizedAsIsText, executiveSummary).then(drawioResult => {
+                    if (drawioResult.error === 'insufficient_content') {
+                        generatedResults.asisFlow = { type: 'drawio', needsRefinement: true, flowType: 'asisFlow', originalText: sanitizedAsIsText, context: executiveSummary };
+                    } else {
+                        let finalAsIsXml = drawioResult;
+                        for (let [code, original] of masterMapping.entries()) {
+                            finalAsIsXml = finalAsIsXml.replace(new RegExp(escapeRegExp(code), 'g'), original);
+                        }
+                        generatedResults.asisFlow = { type: 'drawio', fileName: `${baseName}_As_Is_Flow.drawio`, content: finalAsIsXml, contentType: 'application/xml' };
+                    }
+                })
+            );
         }
+
         if (requestedArtifacts.includes('tobeFlow') && brdText) {
-            console.log(`[${reqId}] Generating To-Be Flow...`);
+            console.log(`[${reqId}] Starting To-Be Flow generation...`);
             const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
             const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
-            const drawioXml = await generateDrawioXmlFromProcessDescription(sanitizedToBeText, executiveSummary);
-            let finalToBeXml = drawioXml;
-            for (let [code, original] of masterMapping.entries()) {
-                const regex = new RegExp(escapeRegExp(code), 'g');
-                finalToBeXml = finalToBeXml.replace(regex, original);
-            }
-            generatedResults.tobeFlow = { type: 'drawio', fileName: `${baseName}_To_Be_Flow.drawio`, content: finalToBeXml, contentType: 'application/xml' };
+
+            flowPromises.push(
+                generateDrawioXmlFromProcessDescription(sanitizedToBeText, executiveSummary).then(drawioResult => {
+                    if (drawioResult.error === 'insufficient_content') {
+                        generatedResults.tobeFlow = { type: 'drawio', needsRefinement: true, flowType: 'tobeFlow', originalText: sanitizedToBeText, context: executiveSummary };
+                    } else {
+                        let finalToBeXml = drawioResult;
+                        for (let [code, original] of masterMapping.entries()) {
+                            finalToBeXml = finalToBeXml.replace(new RegExp(escapeRegExp(code), 'g'), original);
+                        }
+                        generatedResults.tobeFlow = { type: 'drawio', fileName: `${baseName}_To_Be_Flow.drawio`, content: finalToBeXml, contentType: 'application/xml' };
+                    }
+                })
+            );
         }
 
-        if (requestedArtifacts.includes('anonymized')) {
-            console.log(`[${reqId}] Generating individual anonymized files for zip...`);
-            const anonymizedFileResults = [];
-            for (const file of originalFilesContent) {
-                const { anonymizedText } = await anonymizeText(file.content, masterMapping);
-                anonymizedFileResults.push({
-                    fileName: `Anonymized_${file.name}.txt`,
-                    content: anonymizedText
-                });
-            }
-            const zip = new jszip();
-            for (const result of anonymizedFileResults) {
-                zip.file(result.fileName, result.content);
-            }
-            const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-            generatedResults.anonymized = { type: 'zip', fileName: `${baseName}_Anonymized_Texts.zip`, content: zipBuffer.toString('base64'), contentType: 'application/zip' };
-        }
-
-        if (requestedArtifacts.includes('mapping')) {
-            console.log(`[${reqId}] Creating consolidated redaction key...`);
-            let csvContent = "Code,Original_Entity\n";
-            for (let [code, original] of masterMapping.entries()) {
-                csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
-            }
-            generatedResults.mapping = { type: 'csv', fileName: `${baseName}_Anonymization_Key.csv`, content: Buffer.from(csvContent).toString('base64'), contentType: 'text/csv' };
-        }
+        // Wait for all flow generations to complete
+        await Promise.all(flowPromises);
+        console.log(`[${reqId}] All parallel flow generations have completed.`);
 
         console.log(`[${reqId}] Successfully generated all requested artifacts.`);
         console.log(`[${reqId}] --- BRD GENERATION SUCCEEDED ---`);
-        res.status(200).json(generatedResults);
+        res.status(200).json({ reqId, artifacts: generatedResults });
 
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate:`, error);
         res.status(500).json({ error: error.message });
     }
 });
+
+// **NEW ENDPOINT** for refining process flows
+app.post('/api/refine-flow', async (req, res) => {
+    const { reqId, originalText, context, userRefinements, flowType, baseName } = req.body;
+    console.log(`[${reqId}] Received request to refine ${flowType}.`);
+
+    if (!reqId || !originalText || !context || !userRefinements || !flowType || !baseName) {
+        return res.status(400).json({ error: "Missing required fields for refinement." });
+    }
+
+    try {
+        // 1. Reconstruct the master mapping from the saved reference file
+        const referencePath = '/Users/ruchirkulkarni/Library/CloudStorage/OneDrive-CalfusTechnologiesIndiaPrivateLimited/ERP Codes/ExploraAI/Reference_Docs';
+        const archiveFileName = `${baseName}_Reference_${reqId}.zip`;
+        const fullPath = path.join(referencePath, archiveFileName);
+
+        if (!fs.existsSync(fullPath)) {
+            throw new Error(`Reference archive not found for request ID: ${reqId}`);
+        }
+
+        const zipData = fs.readFileSync(fullPath);
+        const zip = await jszip.loadAsync(zipData);
+        const csvFile = zip.file('redaction_key.csv');
+        if (!csvFile) throw new Error('Redaction key not found in archive.');
+
+        const csvContent = await csvFile.async('string');
+        const masterMapping = new Map();
+        const lines = csvContent.split('\n').slice(1); // Skip header
+        lines.forEach(line => {
+            const parts = line.split(',');
+            if (parts.length >= 2) {
+                const code = parts[0].trim();
+                const original = parts.slice(1).join(',').trim().replace(/"/g, '');
+                if (code && original) masterMapping.set(code, original);
+            }
+        });
+
+        // 2. Create the refined prompt and generate the new flow
+        const refinedProcessDescription = `${originalText}\n\n--- ADDITIONAL DETAILS FROM USER ---\n\n${userRefinements}`;
+        const drawioResult = await generateDrawioXmlFromProcessDescription(refinedProcessDescription, context);
+
+        if (drawioResult.error === 'insufficient_content') {
+            return res.status(400).json({ error: "The refined description is still not detailed enough. Please add more specific steps." });
+        }
+
+        // 3. De-anonymize the result
+        let finalXml = drawioResult;
+        for (let [code, original] of masterMapping.entries()) {
+            finalXml = finalXml.replace(new RegExp(escapeRegExp(code), 'g'), original);
+        }
+
+        // 4. Send back the completed artifact
+        const finalArtifact = {
+            type: 'drawio',
+            fileName: `${baseName}_${flowType === 'asisFlow' ? 'As_Is' : 'To_Be'}_Flow.drawio`,
+            content: finalXml,
+            contentType: 'application/xml'
+        };
+
+        console.log(`[${reqId}] Successfully refined ${flowType}.`);
+        res.status(200).json({ [flowType]: finalArtifact });
+
+    } catch (error) {
+        console.error(`[${reqId}] Error in /api/refine-flow:`, error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res) => {
     const reqId = uuidv4().slice(0, 8);
@@ -1092,7 +1156,6 @@ app.post('/api/generate-training-deck', upload.single('file'), async (req, res) 
                 const matchedPptFiles = [...new Set(results.map(item => item['Matched PPT']))].filter(f => f !== "No relevant deck found");
 
                 if (matchedPptFiles.length === 0) {
-                    // If no matches, we can still send back just the report
                     console.log(`[${reqId}] No confident matches found. Generating report only.`);
                 }
 
@@ -1117,10 +1180,8 @@ app.post('/api/generate-training-deck', upload.single('file'), async (req, res) 
                 const fileName = `Matched_Decks_${originalName}_${uniqueId}.zip`;
                 const tempFilePath = path.join(TEMP_DOWNLOAD_DIR, fileName);
 
-                // Save the file to the temporary directory
                 fs.writeFileSync(tempFilePath, zipBuffer);
 
-                // Respond with the URL to the file
                 const downloadUrl = `http://localhost:${port}/downloads/${fileName}`;
                 
                 res.status(200).json({

@@ -1,28 +1,22 @@
 // client/src/BrdGeneratorPage.js
 // This component now has a simplified and more polished UI.
 // CHANGE: Removed anonymized/mapping options and enhanced the overall aesthetic.
+// NEW: Added a modal and logic to handle the refinement fallback for process flows.
+// OPTIMIZATION: Replaced the fake, timer-based loading bar with a simple, honest loading spinner for a faster-feeling UI.
+// FIX: Corrected the icon name from 'Loader' to 'Loader2' to fix compilation error.
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, Sparkles, Workflow, Square, CheckSquare, XCircle, Edit, X } from 'lucide-react';
+import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, Sparkles, Workflow, Square, CheckSquare, XCircle, Edit, X, Send, Loader2 } from 'lucide-react';
 // Make sure to install it: npm install react-drawio
 import { DrawIoEmbed } from 'react-drawio';
 
 
 // --- Draw.io Editor Component (Full-Screen Modal) ---
 const DrawioEditor = ({ xml, onBack, diagramName }) => {
-    const drawioRef = useRef(null);
-
-    const handleSave = (event) => {
-        console.log('Diagram saved within Draw.io iframe');
-    };
-
     return (
-        // Full-screen overlay with slightly more padding on larger screens
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 lg:p-10">
-            {/* Main modal container with overflow-hidden to enforce rounded corners on children */}
             <div className="w-full h-full bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-gray-300 overflow-hidden">
-                {/* Header - flex-shrink-0 prevents it from shrinking */}
                 <div className="flex justify-between items-center p-4 border-b bg-gray-50 flex-shrink-0">
                     <h3 className="text-lg sm:text-xl font-bold text-gray-800 truncate">{diagramName}</h3>
                     <button
@@ -33,14 +27,80 @@ const DrawioEditor = ({ xml, onBack, diagramName }) => {
                         <span>Close Editor</span>
                     </button>
                 </div>
-                {/* Editor container - flex-grow allows it to fill all available space */}
                 <div className="flex-grow w-full h-full bg-gray-100">
                     <DrawIoEmbed
-                        ref={drawioRef}
                         xml={xml}
-                        onSave={handleSave}
                         urlParameters={{ ui: 'kennedy', spin: 1, zoom: '1', noExitBtn: 1 }}
                     />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- **NEW** Refinement Modal Component ---
+const RefinementModal = ({ data, onCancel, onSubmit, flowType }) => {
+    const [userRefinements, setUserRefinements] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState('');
+
+    const getFlowName = () => {
+        if (flowType === 'asisFlow') return 'As-Is Process Flow';
+        if (flowType === 'tobeFlow') return 'To-Be Process Flow';
+        return 'Process Flow';
+    };
+
+    const handleSubmit = async () => {
+        if (!userRefinements.trim()) {
+            setError('Please provide additional details before submitting.');
+            return;
+        }
+        setError('');
+        setIsSubmitting(true);
+        try {
+            await onSubmit(userRefinements);
+        } catch (e) {
+            setError(e.message || "Failed to submit refinement. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b">
+                    <h2 className="text-2xl font-bold text-gray-800">More Information Needed</h2>
+                    <p className="text-gray-600 mt-2">The AI determined the description for the <span className="font-bold">{getFlowName()}</span> was not detailed enough. Please provide more specific steps or details below.</p>
+                </div>
+                <div className="p-6 space-y-4 overflow-y-auto">
+                    <div>
+                        <label className="font-semibold text-gray-700">Original Description (for context)</label>
+                        <div className="mt-2 p-3 bg-gray-100 rounded-lg text-sm text-gray-700 max-h-40 overflow-y-auto border">
+                            <pre className="whitespace-pre-wrap font-sans">{data.originalText}</pre>
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="refinements" className="font-semibold text-gray-700">Additional Details</label>
+                        <textarea
+                            id="refinements"
+                            value={userRefinements}
+                            onChange={(e) => setUserRefinements(e.target.value)}
+                            placeholder="e.g., Step 1: The user logs in. Step 2: The system verifies credentials. Step 3: If successful, the user is redirected to the dashboard..."
+                            className="mt-2 w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
+                            rows="8"
+                        />
+                    </div>
+                    {error && <p className="text-red-600 text-sm">{error}</p>}
+                </div>
+                <div className="flex justify-end items-center p-6 border-t bg-gray-50 rounded-b-2xl">
+                    <button onClick={onCancel} disabled={isSubmitting} className="text-gray-600 font-semibold px-4 py-2 rounded-lg mr-4 hover:bg-gray-200 transition-colors disabled:opacity-50">
+                        Cancel
+                    </button>
+                    <button onClick={handleSubmit} disabled={isSubmitting} className="bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow hover:bg-indigo-700 transition-all flex items-center disabled:bg-indigo-300">
+                        <Send className="w-5 h-5 mr-2" />
+                        {isSubmitting ? 'Submitting...' : 'Submit Refinement'}
+                    </button>
                 </div>
             </div>
         </div>
@@ -110,13 +170,12 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
     );
 };
 
-const LoadingProgress = ({ progress, message }) => (
+// **OPTIMIZED** Loading Component
+const LoadingProgress = () => (
     <div className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto">
-        <h3 className="text-2xl font-semibold text-gray-800 mb-4">Generating BRD & Process Flows...</h3>
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mb-4">
-            <div className="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
-        </div>
-        <p className="text-indigo-700 font-semibold mt-2 h-6 transition-opacity duration-300">{message}</p>
+        <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mb-6" />
+        <h3 className="text-2xl font-semibold text-gray-800">Generating Artifacts...</h3>
+        <p className="text-gray-600 mt-2">The AI is processing your documents. This may take a moment.</p>
     </div>
 );
 
@@ -159,8 +218,8 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
         link.parentNode.removeChild(link);
     };
 
-    const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type !== 'drawio');
-    const editableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type === 'drawio');
+    const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type !== 'drawio' && !artifact.needsRefinement);
+    const editableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type === 'drawio' && !artifact.needsRefinement);
     const getFlowDisplayName = (key) => key === 'asisFlow' ? 'As-Is Flow' : (key === 'tobeFlow' ? 'To-Be Flow' : 'Process Flow');
 
     return (
@@ -210,39 +269,14 @@ export default function BrdGeneratorPage({ onBack }) {
     const [isSuccess, setIsSuccess] = useState(false);
     const [generatedArtifacts, setGeneratedArtifacts] = useState({});
     const [diagramToEdit, setDiagramToEdit] = useState(null);
-    const [loadingMessage, setLoadingMessage] = useState('');
-    const [progress, setProgress] = useState(0);
+    const [reqId, setReqId] = useState(null);
+    const [refinementState, setRefinementState] = useState({ isOpen: false, data: null });
 
-    // --- REMOVED anonymized and mapping from default state ---
     const [selectedArtifacts, setSelectedArtifacts] = useState({
         brd: true,
         asisFlow: true,
         tobeFlow: true,
     });
-
-    const loadingSteps = React.useMemo(() => [
-        { message: "Analyzing documents for key entities...", progress: 15, duration: 6000 },
-        { message: "Masking confidential information...", progress: 30, duration: 6000 },
-        { message: "Drafting Business Requirements Document...", progress: 45, duration: 20000 },
-        { message: "Creating As-Is Process Flow...", progress: 69, duration: 10000 },
-        { message: "Creating To-Be Process Flow...", progress: 80, duration: 10000 },
-        { message: "Packaging final artifacts...", progress: 95, duration: 2500 },
-    ], []);
-
-    useEffect(() => {
-        if (isLoading) {
-            let currentStep = 0;
-            const runStep = () => {
-                if (currentStep < loadingSteps.length) {
-                    const step = loadingSteps[currentStep];
-                    setLoadingMessage(step.message);
-                    setProgress(step.progress);
-                    setTimeout(() => { currentStep++; runStep(); }, step.duration);
-                }
-            };
-            runStep();
-        }
-    }, [isLoading, loadingSteps]);
 
     const handleCheckboxChange = (id, checked) => setSelectedArtifacts(prev => ({ ...prev, [id]: checked }));
 
@@ -256,7 +290,6 @@ export default function BrdGeneratorPage({ onBack }) {
 
     const handleFileRemove = (indexToRemove) => setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
 
-    // --- REMOVED anonymized and mapping from the options list ---
     const artifactOptions = [
         { id: 'brd', label: 'Unified BRD (.docx)', icon: <FileText className="w-6 h-6 text-indigo-500 mr-3" /> },
         { id: 'asisFlow', label: 'As-Is Process Flow', icon: <Workflow className="w-6 h-6 text-blue-500 mr-3" /> },
@@ -264,17 +297,17 @@ export default function BrdGeneratorPage({ onBack }) {
     ];
 
     const resetState = useCallback(() => {
-        setSelectedFiles([]); setIsLoading(false); setError(null); setIsSuccess(false);
-        setGeneratedArtifacts({}); setDiagramToEdit(null); setLoadingMessage(''); setProgress(0);
-        setPageState('generator');
+        setPageState('generator'); setSelectedFiles([]); setIsLoading(false); setError(null);
+        setIsSuccess(false); setGeneratedArtifacts({}); setDiagramToEdit(null);
+        setReqId(null);
+        setRefinementState({ isOpen: false, data: null });
     }, []);
 
     const handleBackToResults = () => { setDiagramToEdit(null); setPageState('generator'); };
     const handleEditDiagram = (diagramArtifact) => { setDiagramToEdit(diagramArtifact); setPageState('diagramEditor'); };
 
-    const handleSubmit = async () => {
-        // --- UPDATED to filter out the removed options automatically ---
-        const artifactsToRequest = Object.keys(selectedArtifacts).filter(key => selectedArtifacts[key] && artifactOptions.some(opt => opt.id === key));
+    const handleInitialSubmit = async () => {
+        const artifactsToRequest = Object.keys(selectedArtifacts).filter(key => selectedArtifacts[key]);
         if (selectedFiles.length === 0) { setError("Please select at least one file."); return; }
         if (artifactsToRequest.length === 0) { setError("Please select at least one artifact to generate."); return; }
 
@@ -286,8 +319,17 @@ export default function BrdGeneratorPage({ onBack }) {
 
         try {
             const response = await axios.post('http://localhost:3001/api/generate-brd', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-            setGeneratedArtifacts(response.data);
-            setIsSuccess(true);
+            
+            setReqId(response.data.reqId);
+            setGeneratedArtifacts(response.data.artifacts);
+
+            const refinementNeeded = Object.values(response.data.artifacts).find(art => art.needsRefinement);
+
+            if (refinementNeeded) {
+                setRefinementState({ isOpen: true, data: refinementNeeded });
+            } else {
+                setIsSuccess(true);
+            }
         } catch (err) {
             setError(err.response?.data?.error || err.message || "An unknown error occurred.");
         } finally {
@@ -295,8 +337,46 @@ export default function BrdGeneratorPage({ onBack }) {
         }
     };
 
+    const handleRefinementSubmit = async (userRefinements) => {
+        const { flowType, originalText, context } = refinementState.data;
+        const baseName = selectedFiles[0].name.split('.')[0];
+        
+        try {
+            const response = await axios.post('http://localhost:3001/api/refine-flow', {
+                reqId,
+                originalText,
+                context,
+                userRefinements,
+                flowType,
+                baseName
+            });
+
+            const newArtifacts = { ...generatedArtifacts, ...response.data };
+            setGeneratedArtifacts(newArtifacts);
+
+            const nextRefinement = Object.values(newArtifacts).find(art => art.needsRefinement);
+
+            if (nextRefinement) {
+                setRefinementState({ isOpen: true, data: nextRefinement });
+            } else {
+                setRefinementState({ isOpen: false, data: null });
+                setIsSuccess(true);
+            }
+        } catch (err) {
+            throw new Error(err.response?.data?.error || "Failed to process refinement.");
+        }
+    };
+
     return (
         <div>
+            {refinementState.isOpen && (
+                <RefinementModal
+                    data={refinementState.data}
+                    flowType={refinementState.data.flowType}
+                    onCancel={() => setRefinementState({ isOpen: false, data: null })}
+                    onSubmit={handleRefinementSubmit}
+                />
+            )}
             <div className={`${pageState === 'diagramEditor' ? 'hidden' : ''}`}>
                 <button onClick={onBack} className="flex items-center text-indigo-600 font-semibold mb-8 hover:text-indigo-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Home</button>
                 <div className="text-center mb-12">
@@ -306,7 +386,7 @@ export default function BrdGeneratorPage({ onBack }) {
                     <p className="text-lg text-gray-500 max-w-3xl mx-auto">Upload your documents and select which artifacts you'd like our AI to generate.</p>
                 </div>
 
-                {isLoading && <LoadingProgress progress={progress} message={loadingMessage} />}
+                {isLoading && <LoadingProgress />}
                 {isSuccess && <SuccessDisplay onReset={resetState} generatedArtifacts={generatedArtifacts} onEditDiagram={handleEditDiagram} />}
 
                 {!isLoading && !isSuccess && (
@@ -321,9 +401,9 @@ export default function BrdGeneratorPage({ onBack }) {
                             </div>
                         </div>
 
-                        {error && <div className="mt-8"><ErrorDisplay message={error} onRetry={handleSubmit} /></div>}
+                        {error && <div className="mt-8"><ErrorDisplay message={error} onRetry={handleInitialSubmit} /></div>}
                         <div className="text-center mt-10">
-                            <button onClick={handleSubmit} disabled={selectedFiles.length === 0 || Object.values(selectedArtifacts).every(v => !v)} className="bg-[#13294B] text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-[#1C4A50] transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 flex items-center justify-center mx-auto">
+                            <button onClick={handleInitialSubmit} disabled={selectedFiles.length === 0 || Object.values(selectedArtifacts).every(v => !v)} className="bg-[#13294B] text-white font-bold text-lg py-4 px-10 rounded-full shadow-lg hover:bg-[#1C4A50] transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:shadow-none transform hover:scale-105 flex items-center justify-center mx-auto">
                                 <Sparkles className="w-6 h-6 mr-3" />
                                 Generate Selected Documents
                             </button>
