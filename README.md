@@ -55,6 +55,17 @@ Accelerate user adoption by intelligently matching project documentation to your
 
 ---
 
+## Privacy & Security
+
+We understand your project documents contain sensitive information.  
+**Explora AI** is built with **privacy-first architecture**:
+
+- All uploaded content is anonymized before processing.
+- Confidential stakeholder and company information is replaced with untraceable codes.
+- A **redaction key** is saved locally, enabling you to de-anonymize the final output when needed.
+
+---
+
 ## Explora AI in the ERP Implementation Lifecycle
 
 Explora AI isn’t just a set of tools—it’s a **partner** that adds value at every critical stage.
@@ -73,27 +84,11 @@ Explora AI isn’t just a set of tools—it’s a **partner** that adds value at
 ## How It Works
 
 1. **Upload** – Drag and drop project files (transcripts, notes, BRDs) into the chat.
-2. **Instruct** – Request in plain English, e.g.:
-   - `"Generate a BRD and As-Is flow from these transcripts"`
+2. **Choose** – Choose any of the available features
+   - `"Generate a BRD and As-Is flow from input transcripts"`
    - `"Create test cases based on this BRD"`
+   - `"Find relevant training decks from your knowledge repository"`
 3. **Interact** – AI may ask for clarification or proceed with processing.
 4. **Download** – Receive professionally formatted documents, spreadsheets, and diagrams.
-
----
-
-## Getting Started
-
-To set up the Explora AI application in your local environment, refer to the **Project Setup Guide**.
-
----
-
-## Privacy & Security
-
-We understand your project documents contain sensitive information.  
-**Explora AI** is built with **privacy-first architecture**:
-
-- All uploaded content is anonymized before processing.
-- Confidential stakeholder and company information is replaced with untraceable codes.
-- A **redaction key** is saved locally, enabling you to de-anonymize the final output when needed.
 
 ---
