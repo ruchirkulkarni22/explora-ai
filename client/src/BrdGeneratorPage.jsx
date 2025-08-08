@@ -71,7 +71,9 @@ const RefinementModal = ({ data, onCancel, onSubmit, flowType }) => {
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
                 <div className="p-6 border-b">
                     <h2 className="text-2xl font-bold text-gray-800">More Information Needed</h2>
-                    <p className="text-gray-600 mt-2">The AI determined the description for the <span className="font-bold">{getFlowName()}</span> was not detailed enough. Please provide more specific steps or details below.</p>
+                    <p className="text-gray-600 mt-2">
+                        {data.message || `The AI determined the description for the ${getFlowName()} was not detailed enough. Please provide more specific steps or details below.`}
+                    </p>
                 </div>
                 <div className="p-6 space-y-4 overflow-y-auto">
                     <div>

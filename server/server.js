@@ -5,6 +5,7 @@
 // layout algorithm for cleaner, more professional diagrams.
 // NEW: Added a fallback mechanism to ask for more details if process descriptions are insufficient.
 // OPTIMIZATION: Process flow generation (As-Is & To-Be) now runs in parallel to reduce waiting time.
+// NEW: If BRD is not selected, flows will now trigger the refinement modal directly.
 
 const fs = require('fs');
 const path = require('path');
@@ -267,8 +268,8 @@ Your task is to create a high-quality, logical, and easy-to-follow flowchart tha
 3.  **INTELLIGENT SWIMLANES:** Use swimlanes ONLY if the process description explicitly mentions **more than one** distinct role, department, or system performing actions (e.g., 'Customer' submits, then 'System' validates). If the process describes actions by a single entity or doesn't specify roles, DO NOT use swimlanes.
 4.  **NO DUPLICATION:** Never create duplicate nodes or nodes with synonymous meanings (e.g., "Submit Form" and "Form is Submitted"). Each step should be a unique node.
 5.  **SHAPE AND TEXT FITTING:** Ensure text fits within shapes by using the style \`whiteSpace=wrap;html=1;\`. Make the shapes large enough to comfortably contain the text.
-6.  **ERROR HANDLING:** If the provided text is too short, ambiguous, or completely insufficient to create a meaningful flowchart, you MUST return the following specific error XML and nothing else:
-    \`<mxfile><diagram><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="Error: Insufficient content to generate a diagram." style="text;align=center;verticalAlign=middle;fillColor=#f8d7da;strokeColor=#721c24;fontColor=#721c24;rounded=1;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="240" height="60" as="geometry"/></mxCell></root></mxGraphModel></diagram></mxfile>\`
+6.  **ERROR HANDLING:** If the provided text is too short, ambiguous, or completely insufficient to create a meaningful flowchart, you MUST return the following specific error XML. Inside the "value" attribute of the cell, provide a concise, user-friendly reason for the failure. Example:
+\`<mxfile><diagram><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="Error: The process is missing clear steps. Please describe the sequence of actions from start to finish." style="..." vertex="1" parent="1"><mxGeometry .../></mxCell></root></mxGraphModel></diagram></mxfile>\`
 
 **TECHNICAL GUIDELINES:**
 * **Layout:** Arrange the flowchart in a clean top-to-bottom or left-to-right sequence. Use a grid layout. A good starting point for the first element is x="40", y="40". Use an increment of at least 160 for x or 120 for y.
@@ -289,6 +290,10 @@ Do not include the section header itself in your output. Do not add any commenta
 For example, if the document has a section "## 6. Current State Overview" followed by paragraphs, and the next section is "## 7. Future State Vision", you must return only the paragraphs under "Current State Overview".
 
 The section to extract is: `;
+
+// --- **NEW** PROMPT TO GET A SUMMARY FROM RAW TEXT ---
+const SUMMARY_EXTRACTOR_PROMPT = `You are an expert text analysis AI. Your task is to read the following document(s) and generate a concise, one-paragraph executive summary. The summary should capture the main problem, the proposed solution, and the key objectives. Return ONLY the summary text.`;
+
 
 // --- **NEW**: TEST CASE GENERATION PROMPT (Feature 2) ---
 // --- FINAL - V4: DEDUPLICATION + CLARITY + FLEXIBILITY ---
@@ -602,6 +607,27 @@ const extractSectionWithAI = async (fullBrdText, sectionDescription) => {
     return extractedText;
 };
 
+// --- **NEW** AI Helper to generate a summary from raw text ---
+const generateSummaryFromText = async (text) => {
+    console.log(`Generating summary from raw text...`);
+    const provider = aiConfig.sectionExtractionProvider; // Can reuse the same model
+    const { apiKey, apiBaseUrl, sectionExtractionModel } = aiConfig[provider];
+
+    const fullPrompt = `${SUMMARY_EXTRACTOR_PROMPT}\n\nDOCUMENT:\n${text}`;
+    const apiUrl = `${apiBaseUrl}/${sectionExtractionModel}:generateContent?key=${apiKey}`;
+    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: fullPrompt }] }] }) });
+    
+    if (!response.ok) throw new Error(`${provider} Summary Generation failed: ${response.statusText}`);
+    const result = await response.json();
+    const summaryText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!summaryText || summaryText.trim().length < 10) {
+        console.error("AI summary generation returned little or no content.");
+        return "A summary could not be generated from the provided document.";
+    }
+    return summaryText;
+};
+
 
 const extractEntitiesWithSpacyAdapter = async (text) => {
     const { pythonPath, scriptPath } = aiConfig.spacy;
@@ -709,10 +735,11 @@ const generateDrawioXmlFromProcessDescription = async (processDescription, conte
         throw new Error("The AI failed to return a parsable Draw.io XML structure.");
     }
 
-    // **CHANGE**: Check for insufficient content and return a special object instead of throwing an error.
-    if (cleanedResponse.includes("Error: Insufficient content to generate a diagram.")) {
-        console.warn("[WARN] AI determined the input text was insufficient for diagram generation.");
-        return { error: "insufficient_content", message: "The process description was not detailed enough to create a flowchart." };
+    if (cleanedResponse.includes('value="Error:')) {
+        const errorMatch = cleanedResponse.match(/value="([^"]*)"/);
+        const errorMessage = errorMatch ? errorMatch[1] : "The AI determined the process description was not detailed enough to create a flowchart.";
+        console.warn(`[WARN] AI determined input was insufficient: ${errorMessage}`);
+        return { error: "insufficient_content", message: errorMessage };
     }
 
     return cleanedResponse;
@@ -813,75 +840,90 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
         let brdText = '';
         let executiveSummary = '';
 
-        const needsBrd = requestedArtifacts.some(art => ['brd', 'asisFlow', 'tobeFlow'].includes(art));
-        if (needsBrd) {
+        const brdRequested = requestedArtifacts.includes('brd');
+        const flowsRequested = requestedArtifacts.some(art => ['asisFlow', 'tobeFlow'].includes(art));
+
+        if (brdRequested) {
             console.log(`[${reqId}] Generating unified BRD from anonymized content...`);
-            brdText = await generateBRD(anonymizedCombinedContent);
-            // **FIX**: De-anonymize the BRD text immediately after generation
+            const anonymizedBrdText = await generateBRD(anonymizedCombinedContent);
+
+            // De-anonymize the BRD text immediately for use in all downstream tasks
+            brdText = anonymizedBrdText;
             console.log(`[${reqId}] De-anonymizing master BRD text...`);
             for (let [code, original] of masterMapping.entries()) {
                 const regex = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g');
                 brdText = brdText.replace(regex, original);
             }
+            
             executiveSummary = await extractSectionWithAI(brdText, "Executive Summary");
 
-            if (requestedArtifacts.includes('brd')) {
-                console.log(`[${reqId}] De-anonymizing BRD for final document...`);
-                let finalBRDText = brdText;
-                for (let [code, original] of masterMapping.entries()) {
-                    const regex = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g');
-                    finalBRDText = finalBRDText.replace(regex, original);
-                }
-                const docxBuffer = await createDocxBufferFromMarkdown(finalBRDText);
-                generatedResults.brd = { type: 'docx', fileName: `${baseName}_BRD.docx`, content: docxBuffer.toString('base64'), contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+            console.log(`[${reqId}] Creating BRD .docx file...`);
+            const docxBuffer = await createDocxBufferFromMarkdown(brdText);
+            generatedResults.brd = { type: 'docx', fileName: `${baseName}_BRD.docx`, content: docxBuffer.toString('base64'), contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
+        
+        } else if (flowsRequested) {
+            // If only flows are requested, we still need a summary for context.
+            console.log(`[${reqId}] BRD not requested. Generating summary from source for flow context...`);
+            const anonymizedSummary = await generateSummaryFromText(anonymizedCombinedContent);
+            
+            // De-anonymize the summary
+            executiveSummary = anonymizedSummary;
+            for (let [code, original] of masterMapping.entries()) {
+                const regex = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g');
+                executiveSummary = executiveSummary.replace(regex, original);
             }
         }
 
         // **OPTIMIZATION**: Run As-Is and To-Be flow generation in parallel
         const flowPromises = [];
 
-        if (requestedArtifacts.includes('asisFlow') && brdText) {
-            console.log(`[${reqId}] Starting As-Is Flow generation...`);
-            const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
-            const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
-            
-            flowPromises.push(
-                generateDrawioXmlFromProcessDescription(sanitizedAsIsText, executiveSummary).then(drawioResult => {
+        if (requestedArtifacts.includes('asisFlow')) {
+            const asIsPromise = (async () => {
+                if (brdRequested) { // BRD was generated, so we can extract the section
+                    console.log(`[${reqId}] Starting As-Is Flow generation from BRD...`);
+                    const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
+                    const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
+                    const drawioResult = await generateDrawioXmlFromProcessDescription(sanitizedAsIsText, executiveSummary);
+                    
                     if (drawioResult.error === 'insufficient_content') {
-                        generatedResults.asisFlow = { type: 'drawio', needsRefinement: true, flowType: 'asisFlow', originalText: sanitizedAsIsText, context: executiveSummary };
+                        return { key: 'asisFlow', value: { type: 'drawio', needsRefinement: true, flowType: 'asisFlow', originalText: sanitizedAsIsText, context: executiveSummary, message: drawioResult.message } };
                     } else {
-                        let finalAsIsXml = drawioResult;
-                        for (let [code, original] of masterMapping.entries()) {
-                            finalAsIsXml = finalAsIsXml.replace(new RegExp(escapeRegExp(code), 'g'), original);
-                        }
-                        generatedResults.asisFlow = { type: 'drawio', fileName: `${baseName}_As_Is_Flow.drawio`, content: finalAsIsXml, contentType: 'application/xml' };
+                        return { key: 'asisFlow', value: { type: 'drawio', fileName: `${baseName}_As_Is_Flow.drawio`, content: drawioResult, contentType: 'application/xml' } };
                     }
-                })
-            );
+                } else { // BRD was NOT generated, so we must ask the user for input.
+                    console.log(`[${reqId}] Triggering refinement for As-Is flow as BRD was not generated.`);
+                    return { key: 'asisFlow', value: { type: 'drawio', needsRefinement: true, flowType: 'asisFlow', originalText: 'Please describe the current (As-Is) process step-by-step.', context: executiveSummary } };
+                }
+            })();
+            flowPromises.push(asIsPromise);
         }
 
-        if (requestedArtifacts.includes('tobeFlow') && brdText) {
-            console.log(`[${reqId}] Starting To-Be Flow generation...`);
-            const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
-            const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
+        if (requestedArtifacts.includes('tobeFlow')) {
+            const toBePromise = (async () => {
+                if (brdRequested) { // BRD was generated
+                    console.log(`[${reqId}] Starting To-Be Flow generation from BRD...`);
+                    const toBeText = await extractSectionWithAI(brdText, "Future State Vision");
+                    const sanitizedToBeText = sanitizeTextForFlowchart(toBeText);
+                    const drawioResult = await generateDrawioXmlFromProcessDescription(sanitizedToBeText, executiveSummary);
 
-            flowPromises.push(
-                generateDrawioXmlFromProcessDescription(sanitizedToBeText, executiveSummary).then(drawioResult => {
                     if (drawioResult.error === 'insufficient_content') {
-                        generatedResults.tobeFlow = { type: 'drawio', needsRefinement: true, flowType: 'tobeFlow', originalText: sanitizedToBeText, context: executiveSummary };
+                        return { key: 'tobeFlow', value: { type: 'drawio', needsRefinement: true, flowType: 'tobeFlow', originalText: sanitizedToBeText, context: executiveSummary, message: drawioResult.message } };
                     } else {
-                        let finalToBeXml = drawioResult;
-                        for (let [code, original] of masterMapping.entries()) {
-                            finalToBeXml = finalToBeXml.replace(new RegExp(escapeRegExp(code), 'g'), original);
-                        }
-                        generatedResults.tobeFlow = { type: 'drawio', fileName: `${baseName}_To_Be_Flow.drawio`, content: finalToBeXml, contentType: 'application/xml' };
+                        return { key: 'tobeFlow', value: { type: 'drawio', fileName: `${baseName}_To_Be_Flow.drawio`, content: drawioResult, contentType: 'application/xml' } };
                     }
-                })
-            );
+                } else { // BRD was NOT generated
+                    console.log(`[${reqId}] Triggering refinement for To-Be flow as BRD was not generated.`);
+                    return { key: 'tobeFlow', value: { type: 'drawio', needsRefinement: true, flowType: 'tobeFlow', originalText: 'Please describe the future (To-Be) process step-by-step.', context: executiveSummary } };
+                }
+            })();
+            flowPromises.push(toBePromise);
         }
 
         // Wait for all flow generations to complete
-        await Promise.all(flowPromises);
+        const flowResults = await Promise.all(flowPromises);
+        flowResults.forEach(result => {
+            generatedResults[result.key] = result.value;
+        });
         console.log(`[${reqId}] All parallel flow generations have completed.`);
 
         console.log(`[${reqId}] Successfully generated all requested artifacts.`);
