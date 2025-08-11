@@ -377,7 +377,7 @@ export default function TestCaseGeneratorPage({ onBack }) {
     <div>
       <button
         onClick={onBack}
-        className="flex items-center text-indigo-600 font-semibold mb-8 hover:text-indigo-800 transition-colors"
+        className="flex items-center text-gray-600 font-semibold mb-8 hover:text-gray-800 transition-colors"
       >
         <ChevronLeft className="w-5 h-5 mr-2" />
         Back to Home

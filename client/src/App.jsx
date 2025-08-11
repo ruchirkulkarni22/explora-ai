@@ -47,7 +47,7 @@ function Header({ user, onLogout, onNavigateHome }) {
                                     className="flex items-center gap-3"
                                 >
                                     <span className="font-semibold text-gray-700 hidden sm:inline">{user.name}</span>
-                                    <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-lg">
+                                    <div className="w-10 h-10 rounded-full text-white flex items-center justify-center font-bold text-lg" style={{ backgroundColor: '#006BA6' }}>
                                         {user.initials}
                                     </div>
                                 </button>

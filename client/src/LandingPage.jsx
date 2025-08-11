@@ -28,7 +28,7 @@ export default function LandingPage({ onNavigate }) {
   return (
     <div className="text-center">
       <h1 className="text-5xl md:text-6xl font-extrabold text-[#13294B] mb-4">
-        Welcome to <span className="text-indigo-600">Explora</span>
+        Welcome to <span style={{ color: '#40c1ac' }}>Explora</span>
       </h1>
       <p className="text-xl text-[#1C4A50] max-w-3xl mx-auto mb-16">
         Your AI-powered assistant for transforming project inputs into

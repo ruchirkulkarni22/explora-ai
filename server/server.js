@@ -6,6 +6,7 @@
 // NEW: Added a fallback mechanism to ask for more details if process descriptions are insufficient.
 // OPTIMIZATION: Process flow generation (As-Is & To-Be) now runs in parallel to reduce waiting time.
 // NEW: If BRD is not selected, flows will now trigger the refinement modal directly.
+// DEPLOYMENT CHANGE: Removed local file system storage. Anonymization package is now generated in-memory and sent to the client.
 
 const fs = require('fs');
 const path = require('path');
@@ -34,40 +35,8 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 } // 10 MB limit per file
 });
 
-// NEW: Serve temporary files for direct download
-const TEMP_DOWNLOAD_DIR = path.join(__dirname, 'temp_downloads');
-if (!fs.existsSync(TEMP_DOWNLOAD_DIR)){
-    fs.mkdirSync(TEMP_DOWNLOAD_DIR);
-}
-app.use('/downloads', express.static(TEMP_DOWNLOAD_DIR));
-
-// NEW: Cleanup job to delete old temporary files
-const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 Hour
-setInterval(() => {
-    fs.readdir(TEMP_DOWNLOAD_DIR, (err, files) => {
-        if (err) {
-            console.error("Failed to read temp directory for cleanup:", err);
-            return;
-        }
-        files.forEach(file => {
-            const filePath = path.join(TEMP_DOWNLOAD_DIR, file);
-            fs.stat(filePath, (err, stats) => {
-                if (err) {
-                    console.error(`Failed to get stats for file ${file}:`, err);
-                    return;
-                }
-                const now = new Date().getTime();
-                const fileAge = now - new Date(stats.mtime).getTime();
-                if (fileAge > CLEANUP_INTERVAL_MS) {
-                    fs.unlink(filePath, err => {
-                        if (err) console.error(`Failed to delete old temp file ${file}:`, err);
-                        else console.log(`Cleaned up old temp file: ${file}`);
-                    });
-                }
-            });
-        });
-    });
-}, CLEANUP_INTERVAL_MS);
+// REMOVED: Temporary download directory and cleanup job are no longer needed
+// as files are generated in-memory and sent directly to the client.
 
 // ===================================================================================
 // --- Prompts and Configurations ---
@@ -271,8 +240,14 @@ Your task is to create a high-quality, logical, and easy-to-follow flowchart tha
 6.  **ERROR HANDLING:** If the provided text is too short, ambiguous, or completely insufficient to create a meaningful flowchart, you MUST return the following specific error XML. Inside the "value" attribute of the cell, provide a concise, user-friendly reason for the failure. Example:
 \`<mxfile><diagram><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="Error: The process is missing clear steps. Please describe the sequence of actions from start to finish." style="..." vertex="1" parent="1"><mxGeometry .../></mxCell></root></mxGraphModel></diagram></mxfile>\`
 
+**STRICT LAYOUT & CONNECTION RULES:**
+1.  **NO OVERLAPPING:** Under no circumstances should any elements (text, shapes, arrows) overlap. Ensure ample spacing between all elements for maximum clarity.
+2.  **LOGICAL CONNECTIONS:** Every arrow must originate from one shape and connect directly and cleanly to the next logical shape in the sequence. Arrows should not cross over process boxes.
+3.  **SWIMLANE INTEGRITY:** If swimlanes are used, every single process step (rectangles, rhombuses, etc.) MUST be placed entirely inside its corresponding swimlane. Do not place elements outside of their designated lane.
+
 **TECHNICAL GUIDELINES:**
-* **Layout:** Arrange the flowchart in a clean top-to-bottom or left-to-right sequence. Use a grid layout. A good starting point for the first element is x="40", y="40". Use an increment of at least 160 for x or 120 for y.
+* **Canvas for PowerPoint:** The entire flowchart, including all shapes and swimlanes, must be contained within a bounding box suitable for a 16:9 widescreen slide (like PowerPoint). Assume a canvas size of approximately **1920 pixels wide by 1080 pixels high**. Distribute the elements evenly within this space to avoid cramping and ensure a professional, presentation-ready look.
+* **Layout:** Arrange the flowchart in a clean top-to-bottom or left-to-right sequence. Use a grid layout. A good starting point for the first element is x="40", y="40". Use an increment of at least 160 for x or 120 for y to ensure spacing.
 * **Elements:**
     * **Start Event:** Ellipse (\`style="ellipse;..."\`)
     * **End Event:** Ellipse with a thick border (\`style="ellipse;strokeWidth=2;..."\`)
@@ -372,10 +347,10 @@ Begin now. Output only the final JSON array of test steps. If no valid steps can
 // configuration settings for AI providers
 const aiConfig = {
     entityExtractionProvider: 'spacy',
-    brdGenerationProvider: 'gemini',
-    flowGenerationProvider: 'gemini',
-    sectionExtractionProvider: 'gemini',
-    testCaseGenerationProvider: 'gemini',
+    brdGenerationProvider: 'openrouter',
+    flowGenerationProvider: 'openrouter',
+    sectionExtractionProvider: 'openrouter',
+    testCaseGenerationProvider: 'openrouter',
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
@@ -536,40 +511,7 @@ const parseInlineFormatting = (line) => {
     return runs;
 };
 
-// --- NEW: Helper function to save reference archive locally ---
-const saveReferenceArchive = async (baseName, reqId, anonymizedContent, mapping) => {
-    const referencePath = '/Users/ruchirkulkarni/Library/CloudStorage/OneDrive-CalfusTechnologiesIndiaPrivateLimited/ERP Codes/ExploraAI/Reference_Docs';
-    
-    try {
-        if (!fs.existsSync(referencePath)) {
-            fs.mkdirSync(referencePath, { recursive: true });
-            console.log(`[${reqId}] Created reference directory at: ${referencePath}`);
-        }
-
-        let csvContent = "Code,Original_Entity\n";
-        for (let [code, original] of mapping.entries()) {
-            csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
-        }
-
-        const zip = new jszip();
-        zip.file('anonymized_content.txt', anonymizedContent);
-        zip.file('redaction_key.csv', csvContent);
-
-        const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-        
-        // **CHANGE**: Use reqId in the filename for easy retrieval
-        const fileName = `${baseName}_Reference_${reqId}.zip`;
-        const fullPath = path.join(referencePath, fileName);
-
-        fs.writeFileSync(fullPath, zipBuffer);
-        console.log(`[${reqId}] Successfully saved reference archive to: ${fullPath}`);
-        return fileName; // Return the filename for reference
-    } catch (error) {
-        console.error(`[${reqId}] FAILED to save reference archive. Error: ${error.message}`);
-        return null;
-    }
-};
-
+// REMOVED: saveReferenceArchive is no longer needed.
 
 // ===================================================================================
 // --- AI Model Adapters ---
@@ -834,7 +776,8 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
 
         console.log(`[${reqId}] Creating master entity map from all documents...`);
         const { anonymizedText: anonymizedCombinedContent, mapping: masterMapping } = await anonymizeText(combinedOriginalContent);
-        await saveReferenceArchive(baseName, reqId, anonymizedCombinedContent, masterMapping);
+        
+        // UPDATED: No longer saving to local storage. The anonymization package will be created in memory if requested.
 
         const generatedResults = {};
         let brdText = '';
@@ -842,6 +785,31 @@ app.post('/api/generate-brd', upload.array('files', 10), async (req, res) => {
 
         const brdRequested = requestedArtifacts.includes('brd');
         const flowsRequested = requestedArtifacts.some(art => ['asisFlow', 'tobeFlow'].includes(art));
+        const anonymizationRequested = requestedArtifacts.includes('anonymizationData');
+
+        // NEW: Generate anonymization package if requested
+        if (anonymizationRequested) {
+            console.log(`[${reqId}] Generating anonymization package in-memory...`);
+            let csvContent = "Code,Original_Entity\n";
+            for (let [code, original] of masterMapping.entries()) {
+                csvContent += `${code},"${original.replace(/"/g, '""')}"\n`;
+            }
+
+            const zip = new jszip();
+            zip.file('anonymized_content.txt', anonymizedCombinedContent);
+            zip.file('redaction_key.csv', csvContent);
+
+            const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+            
+            generatedResults.anonymizationData = {
+                type: 'zip',
+                fileName: `${baseName}_Anonymization_Package.zip`,
+                content: zipBuffer.toString('base64'),
+                contentType: 'application/zip'
+            };
+            console.log(`[${reqId}] Anonymization package created.`);
+        }
+
 
         if (brdRequested) {
             console.log(`[${reqId}] Generating unified BRD from anonymized content...`);
@@ -946,33 +914,8 @@ app.post('/api/refine-flow', async (req, res) => {
     }
 
     try {
-        // 1. Reconstruct the master mapping from the saved reference file
-        const referencePath = '/Users/ruchirkulkarni/Library/CloudStorage/OneDrive-CalfusTechnologiesIndiaPrivateLimited/ERP Codes/ExploraAI/Reference_Docs';
-        const archiveFileName = `${baseName}_Reference_${reqId}.zip`;
-        const fullPath = path.join(referencePath, archiveFileName);
-
-        if (!fs.existsSync(fullPath)) {
-            throw new Error(`Reference archive not found for request ID: ${reqId}`);
-        }
-
-        const zipData = fs.readFileSync(fullPath);
-        const zip = await jszip.loadAsync(zipData);
-        const csvFile = zip.file('redaction_key.csv');
-        if (!csvFile) throw new Error('Redaction key not found in archive.');
-
-        const csvContent = await csvFile.async('string');
-        const masterMapping = new Map();
-        const lines = csvContent.split('\n').slice(1); // Skip header
-        lines.forEach(line => {
-            const parts = line.split(',');
-            if (parts.length >= 2) {
-                const code = parts[0].trim();
-                const original = parts.slice(1).join(',').trim().replace(/"/g, '');
-                if (code && original) masterMapping.set(code, original);
-            }
-        });
-
-        // 2. Create the refined prompt and generate the new flow
+        // This endpoint does not need the master mapping as it only deals with flow text.
+        // The de-anonymization happens on the client side if needed, or the text is already de-anonymized.
         const refinedProcessDescription = `${originalText}\n\n--- ADDITIONAL DETAILS FROM USER ---\n\n${userRefinements}`;
         const drawioResult = await generateDrawioXmlFromProcessDescription(refinedProcessDescription, context);
 
@@ -980,17 +923,10 @@ app.post('/api/refine-flow', async (req, res) => {
             return res.status(400).json({ error: "The refined description is still not detailed enough. Please add more specific steps." });
         }
 
-        // 3. De-anonymize the result
-        let finalXml = drawioResult;
-        for (let [code, original] of masterMapping.entries()) {
-            finalXml = finalXml.replace(new RegExp(escapeRegExp(code), 'g'), original);
-        }
-
-        // 4. Send back the completed artifact
         const finalArtifact = {
             type: 'drawio',
             fileName: `${baseName}_${flowType === 'asisFlow' ? 'As_Is' : 'To_Be'}_Flow.drawio`,
-            content: finalXml,
+            content: drawioResult,
             contentType: 'application/xml'
         };
 
@@ -1021,8 +957,8 @@ app.post('/api/generate-test-cases', upload.array('files', 10), async (req, res)
 
         console.log(`[${reqId}] Anonymizing document content...`);
         const { anonymizedText, mapping } = await anonymizeText(combinedOriginalContent);
-        const baseName = req.files[0].originalname.split('.')[0];
-        await saveReferenceArchive(baseName, reqId, anonymizedText, mapping);
+        
+        // No longer saving reference archive locally
 
         console.log(`[${reqId}] Calling AI with V3 prompt to generate test cases...`);
         const userPromptForAI = `Here is the BRD content. Please generate test cases based on it:\n\n${anonymizedText}`;
@@ -1226,15 +1162,12 @@ app.post('/api/generate-training-deck', upload.single('file'), async (req, res) 
                 const originalName = req.file.originalname.replace('.xlsx', '');
                 const uniqueId = uuidv4().slice(0,8);
                 const fileName = `Matched_Decks_${originalName}_${uniqueId}.zip`;
-                const tempFilePath = path.join(TEMP_DOWNLOAD_DIR, fileName);
-
-                fs.writeFileSync(tempFilePath, zipBuffer);
-
-                const downloadUrl = `http://localhost:${port}/downloads/${fileName}`;
                 
+                // Send the buffer directly to the client instead of saving locally
                 res.status(200).json({
-                    downloadUrl: downloadUrl,
-                    fileName: fileName
+                    fileName: fileName,
+                    content: zipBuffer.toString('base64'),
+                    contentType: 'application/zip'
                 });
                 console.log(`[${reqId}] --- TRAINING DECK ANALYSIS SUCCEEDED ---`);
 

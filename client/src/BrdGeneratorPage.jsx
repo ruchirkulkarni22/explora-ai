@@ -1,13 +1,9 @@
 // client/src/BrdGeneratorPage.js
-// This component now has a simplified and more polished UI.
-// CHANGE: Removed anonymized/mapping options and enhanced the overall aesthetic.
-// NEW: Added a modal and logic to handle the refinement fallback for process flows.
-// OPTIMIZATION: Replaced the fake, timer-based loading bar with a simple, honest loading spinner for a faster-feeling UI.
-// FIX: Corrected the icon name from 'Loader' to 'Loader2' to fix compilation error.
+// I've updated this file to include an option for downloading the anonymization package.
 
 import React, { useState, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, Sparkles, Workflow, Square, CheckSquare, XCircle, Edit, X, Send, Loader2 } from 'lucide-react';
+import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, Sparkles, Workflow, Square, CheckSquare, XCircle, Edit, X, Send, Loader2, KeyRound } from 'lucide-react';
 // Make sure to install it: npm install react-drawio
 import { DrawIoEmbed } from 'react-drawio';
 
@@ -38,7 +34,7 @@ const DrawioEditor = ({ xml, onBack, diagramName }) => {
     );
 };
 
-// --- **NEW** Refinement Modal Component ---
+// --- Refinement Modal Component ---
 const RefinementModal = ({ data, onCancel, onSubmit, flowType }) => {
     const [userRefinements, setUserRefinements] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -91,6 +87,7 @@ const RefinementModal = ({ data, onCancel, onSubmit, flowType }) => {
                             placeholder="e.g., Step 1: The user logs in. Step 2: The system verifies credentials. Step 3: If successful, the user is redirected to the dashboard..."
                             className="mt-2 w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-shadow"
                             rows="8"
+                            readOnly={isSubmitting}
                         />
                     </div>
                     {error && <p className="text-red-600 text-sm">{error}</p>}
@@ -172,7 +169,6 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
     );
 };
 
-// **OPTIMIZED** Loading Component
 const LoadingProgress = () => (
     <div className="flex flex-col items-center justify-center text-center p-8 max-w-2xl mx-auto">
         <Loader2 className="w-16 h-16 text-indigo-600 animate-spin mb-6" />
@@ -220,9 +216,15 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
         link.parentNode.removeChild(link);
     };
 
-    const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type !== 'drawio' && !artifact.needsRefinement);
+    const downloadableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => (artifact.type === 'docx' || artifact.type === 'zip') && !artifact.needsRefinement);
     const editableArtifacts = Object.entries(generatedArtifacts).filter(([, artifact]) => artifact.type === 'drawio' && !artifact.needsRefinement);
     const getFlowDisplayName = (key) => key === 'asisFlow' ? 'As-Is Flow' : (key === 'tobeFlow' ? 'To-Be Flow' : 'Process Flow');
+    const getDownloadDisplayName = (key) => {
+        if (key === 'brd') return 'BRD Document';
+        if (key === 'anonymizationData') return 'Anonymization Package';
+        return 'Document';
+    }
+
 
     return (
         <div className="text-center p-8 bg-green-50 rounded-2xl max-w-4xl mx-auto border-2 border-green-200">
@@ -250,7 +252,7 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
                         <div className="flex justify-center flex-wrap gap-4">
                             {downloadableArtifacts.map(([key, artifact]) => (
                                 <button key={key} onClick={() => handleDownload(artifact)} className="bg-indigo-600 text-white font-bold text-lg py-3 px-6 rounded-full shadow-lg hover:bg-indigo-700 transition-all duration-300 flex items-center justify-center">
-                                    <Download className="w-6 h-6 mr-3" /> Download {key.charAt(0).toUpperCase() + key.slice(1)}
+                                    <Download className="w-6 h-6 mr-3" /> Download {getDownloadDisplayName(key)}
                                 </button>
                             ))}
                         </div>
@@ -274,10 +276,12 @@ export default function BrdGeneratorPage({ onBack }) {
     const [reqId, setReqId] = useState(null);
     const [refinementState, setRefinementState] = useState({ isOpen: false, data: null });
 
+    // UPDATED: Added anonymizationData to the selection state
     const [selectedArtifacts, setSelectedArtifacts] = useState({
         brd: true,
         asisFlow: true,
         tobeFlow: true,
+        anonymizationData: true,
     });
 
     const handleCheckboxChange = (id, checked) => setSelectedArtifacts(prev => ({ ...prev, [id]: checked }));
@@ -292,10 +296,12 @@ export default function BrdGeneratorPage({ onBack }) {
 
     const handleFileRemove = (indexToRemove) => setSelectedFiles(prevFiles => prevFiles.filter((_, index) => index !== indexToRemove));
 
+    // UPDATED: Added the new checkbox option
     const artifactOptions = [
-        { id: 'brd', label: 'Unified BRD (.docx)', icon: <FileText className="w-6 h-6 text-indigo-500 mr-3" /> },
+        { id: 'brd', label: 'Unified BRD', icon: <FileText className="w-6 h-6 text-indigo-500 mr-3" /> },
         { id: 'asisFlow', label: 'As-Is Process Flow', icon: <Workflow className="w-6 h-6 text-blue-500 mr-3" /> },
-        { id: 'tobeFlow', label: 'To-Be Process Flow', icon: <Workflow className="w-6 h-6 text-green-500 mr-3" /> }
+        { id: 'tobeFlow', label: 'To-Be Process Flow', icon: <Workflow className="w-6 h-6 text-green-500 mr-3" /> },
+        { id: 'anonymizationData', label: 'Anonymization Package', icon: <KeyRound className="w-6 h-6 text-yellow-500 mr-3" /> }
     ];
 
     const resetState = useCallback(() => {
@@ -380,7 +386,7 @@ export default function BrdGeneratorPage({ onBack }) {
                 />
             )}
             <div className={`${pageState === 'diagramEditor' ? 'hidden' : ''}`}>
-                <button onClick={onBack} className="flex items-center text-indigo-600 font-semibold mb-8 hover:text-indigo-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Home</button>
+                <button onClick={onBack} className="flex items-center text-gray-600 font-semibold mb-8 hover:text-gray-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Home</button>
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-5xl font-extrabold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-[#13294B] to-[#006BA6]">
                         BRD & Process Flow Generation
@@ -396,7 +402,7 @@ export default function BrdGeneratorPage({ onBack }) {
                         <FileUploader onFileSelect={handleFileSelect} selectedFiles={selectedFiles} onFileRemove={handleFileRemove} />
                         <div className="max-w-4xl mx-auto mt-10 p-6 bg-white/60 rounded-2xl shadow-sm border border-gray-200">
                             <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Select Artifacts to Generate</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {artifactOptions.map(option => (
                                     <ArtifactCheckbox key={option.id} id={option.id} label={option.label} checked={selectedArtifacts[option.id]} onChange={handleCheckboxChange} icon={option.icon} />
                                 ))}
