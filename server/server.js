@@ -226,35 +226,45 @@ const BRD_MARKDOWN_TEMPLATE = `
 | [Approver Name] | [Role] | ____________________ |
 `;
 
-const PROCESS_TO_DRAWIO_XML_PROMPT = `You are an expert system that converts a business process description into a high-quality, simple, and clean Draw.io XML flowchart.
+const PROCESS_TO_DRAWIO_XML_PROMPT = `You are a meticulous and precise diagramming engine that converts business process descriptions into perfect, production-quality Draw.io XML flowcharts. Your sole purpose is to generate clean, readable, and logically flawless diagrams.
 
-**PRIMARY GOAL:**
-Your task is to create a high-quality, logical, and easy-to-follow flowchart that accurately represents the ENTIRE process described in the provided text. The output must be a single, valid Draw.io XML structure.
+**--- LAYOUT & QUALITY MANIFESTO ---**
 
-**CRITICAL RULES:**
-1.  **XML ONLY:** Your entire response MUST be the XML code. Start with \`<mxfile ...>\` and end with \`</mxfile>\`. Do not include any other text, explanations, or markdown formatting.
-2.  **STRICTLY ADHERE TO TEXT:** Base the flowchart ONLY on the provided process description. Do not invent steps or add information not present in the text.
-3.  **INTELLIGENT SWIMLANES:** Use swimlanes ONLY if the process description explicitly mentions **more than one** distinct role, department, or system performing actions (e.g., 'Customer' submits, then 'System' validates). If the process describes actions by a single entity or doesn't specify roles, DO NOT use swimlanes.
-4.  **NO DUPLICATION:** Never create duplicate nodes or nodes with synonymous meanings (e.g., "Submit Form" and "Form is Submitted"). Each step should be a unique node.
-5.  **SHAPE AND TEXT FITTING:** Ensure text fits within shapes by using the style \`whiteSpace=wrap;html=1;\`. Make the shapes large enough to comfortably contain the text.
-6.  **ERROR HANDLING:** If the provided text is too short, ambiguous, or completely insufficient to create a meaningful flowchart, you MUST return the following specific error XML. Inside the "value" attribute of the cell, provide a concise, user-friendly reason for the failure. Example:
-\`<mxfile><diagram><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/><mxCell id="2" value="Error: The process is missing clear steps. Please describe the sequence of actions from start to finish." style="..." vertex="1" parent="1"><mxGeometry .../></mxCell></root></mxGraphModel></diagram></mxfile>\`
+This manifesto contains the non-negotiable rules you MUST follow. Failure to adhere to these rules results in a failed output.
 
-**STRICT LAYOUT & CONNECTION RULES:**
-1.  **NO OVERLAPPING:** Under no circumstances should any elements (text, shapes, arrows) overlap. Ensure ample spacing between all elements for maximum clarity.
-2.  **LOGICAL CONNECTIONS:** Every arrow must originate from one shape and connect directly and cleanly to the next logical shape in the sequence. Arrows should not cross over process boxes.
-3.  **SWIMLANE INTEGRITY:** If swimlanes are used, every single process step (rectangles, rhombuses, etc.) MUST be placed entirely inside its corresponding swimlane. Do not place elements outside of their designated lane.
+1.  **ZERO OVERLAP GUARANTEE:**
+    * **Shapes & Text:** No process box, decision diamond, start/end event, or text label may overlap with any other element.
+    * **Connectors (Arrows):** Connectors MUST NEVER cross through or overlap with any shape. They must be routed cleanly in the empty space between shapes.
 
-**TECHNICAL GUIDELINES:**
-* **Canvas for PowerPoint:** The entire flowchart, including all shapes and swimlanes, must be contained within a bounding box suitable for a 16:9 widescreen slide (like PowerPoint). Assume a canvas size of approximately **1920 pixels wide by 1080 pixels high**. Distribute the elements evenly within this space to avoid cramping and ensure a professional, presentation-ready look.
-* **Layout:** Arrange the flowchart in a clean top-to-bottom or left-to-right sequence. Use a grid layout. A good starting point for the first element is x="40", y="40". Use an increment of at least 160 for x or 120 for y to ensure spacing.
-* **Elements:**
-    * **Start Event:** Ellipse (\`style="ellipse;..."\`)
-    * **End Event:** Ellipse with a thick border (\`style="ellipse;strokeWidth=2;..."\`)
-    * **Task/Activity:** Rectangle (\`style="rounded=1;whiteSpace=wrap;html=1;"\`)
-    * **Decision/Gateway:** Rhombus (\`style="rhombus;whiteSpace=wrap;html=1;"\`)
-* **Connectors:** Use arrows to connect elements logically. Label connectors from a decision gateway (e.g., "Yes", "No").
-* **IDs:** Each element (\`mxCell\`) must have a unique \`id\`, starting from \`id="2"\` for the first visible element.`;
+2.  **STRICT ORTHOGONAL ROUTING:**
+    * All connectors MUST be right-angled. Use \`edgeStyle=orthogonalEdgeStyle;\` in the style attribute for all connectors. This is mandatory.
+    * Connectors should consist of only vertical and horizontal segments. No diagonal lines are permitted between process steps.
+
+3.  **GRID-BASED PRECISION & SPACING:**
+    * Imagine a strict grid. All elements must be perfectly aligned horizontally and vertically.
+    * **Consistent Spacing:** Maintain a generous and consistent empty space between all shapes. A minimum of **60px** between adjacent shapes is required.
+    * **Sizing:** Task boxes (\`mxRectangle\`) should be a standard size, for example, \`width="160" height="80"\`, and large enough to contain their text without overflow.
+
+4.  **ABSOLUTE SWIMLANE INTEGRITY:**
+    * If swimlanes are used, every single process node (rectangles, diamonds, etc.) MUST be placed **ENTIRELY** inside its parent swimlane's boundaries.
+    * The swimlane itself (\`swimlane;...\`) must be large enough to contain all of its steps with ample internal padding.
+
+5.  **LOGICAL FLOW & CONNECTION POINTS:**
+    * The overall diagram must flow logically from a single "Start" event to one or more "End" events, typically top-to-bottom or left-to-right.
+    * Connectors must originate from and terminate at the standard, centered connection points on the shapes. Do not connect to arbitrary points on a shape's edge.
+
+**--- CORE TASK & FORMAT ---**
+
+* **INPUT:** A business process description.
+* **OUTPUT:** A single, valid Draw.io XML structure. Your entire response MUST start with \`<mxfile ...>\` and end with \`</mxfile>\`. Do not include any other text, explanations, or markdown.
+* **SHAPES:**
+    * **Start/End:** Ellipse (\`shape=ellipse\`). End events must have a thicker border (\`strokeWidth=2\`).
+    * **Task:** Rounded Rectangle (\`shape=rectangle;rounded=1\`).
+    * **Decision:** Diamond (\`shape=rhombus\`).
+* **TEXT:** All text must be wrapped and centered within its shape (\`whiteSpace=wrap;html=1;align=center;verticalAlign=middle;\`).
+* **ERROR HANDLING:** If the input text is insufficient to create a meaningful diagram, you MUST return a single error shape with a user-friendly explanation, as per the original instructions.
+
+Analyze the following process description and generate a perfect Draw.io XML file that strictly adheres to every rule in the Manifesto.`;
 
 
 // Prompt to intelligently extract a section from a document
@@ -347,10 +357,10 @@ Begin now. Output only the final JSON array of test steps. If no valid steps can
 // configuration settings for AI providers
 const aiConfig = {
     entityExtractionProvider: 'spacy',
-    brdGenerationProvider: 'openrouter',
-    flowGenerationProvider: 'openrouter',
-    sectionExtractionProvider: 'openrouter',
-    testCaseGenerationProvider: 'openrouter',
+    brdGenerationProvider: 'gemini',
+    flowGenerationProvider: 'gemini',
+    sectionExtractionProvider: 'gemini',
+    testCaseGenerationProvider: 'gemini',
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
@@ -375,7 +385,7 @@ const aiConfig = {
         sectionExtractionModel: 'qwen/qwen3-coder:free',
         testCaseGenerationModel: 'qwen/qwen3-coder:free',
         apiBaseUrl: 'https://openrouter.ai/api/v1',
-        siteUrl: 'http://localhost:3000',
+        siteUrl: 'http://localhost:5173',
         appName: 'Explora'
     },
     spacy: {
