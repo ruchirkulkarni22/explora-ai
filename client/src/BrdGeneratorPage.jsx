@@ -3,34 +3,99 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import axios from 'axios';
-import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, Sparkles, Workflow, Square, CheckSquare, XCircle, Edit, X, Send, Loader2, KeyRound } from 'lucide-react';
+import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, Sparkles, Workflow, Square, CheckSquare, XCircle, Edit, X, Send, Loader2, KeyRound, HelpCircle } from 'lucide-react';
 // Make sure to install it: npm install react-drawio
 import { DrawIoEmbed } from 'react-drawio';
 
 
-// --- Draw.io Editor Component (Full-Screen Modal) ---
-const DrawioEditor = ({ xml, onBack, diagramName }) => {
+// --- "How to Save" Modal ---
+const HowToSaveModal = ({ onClose }) => {
     return (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 lg:p-10">
-            <div className="w-full h-full bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-gray-300 overflow-hidden">
-                <div className="flex justify-between items-center p-4 border-b bg-gray-50 flex-shrink-0">
-                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 truncate">{diagramName}</h3>
-                    <button
-                        onClick={onBack}
-                        className="flex items-center gap-2 bg-[#13294B] text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-[#1C4A50] transition-all"
-                    >
-                        <X className="w-5 h-5" />
-                        <span>Close Editor</span>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh]">
+                <div className="p-6 border-b flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-gray-800">Exporting for Editability</h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+                        <X className="w-7 h-7" />
                     </button>
                 </div>
-                <div className="flex-grow w-full h-full bg-gray-100">
-                    <DrawIoEmbed
-                        xml={xml}
-                        urlParameters={{ ui: 'kennedy', spin: 1, zoom: '1', noExitBtn: 1 }}
-                    />
+                <div className="p-6 space-y-6 overflow-y-auto">
+                    {/* Draw.io Section */}
+                    <div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">Exporting for Draw.io</h3>
+                        <div className="space-y-2">
+                            <p><strong>1. Export as XML (.drawio/.xml):</strong></p>
+                            <ul className="list-disc list-inside pl-4 text-gray-700">
+                                <li>Go to <code className="bg-gray-200 p-1 rounded">File &gt; Export as &gt; XML</code>.</li>
+                                <li>Save the file. This keeps all editability, layers, and formatting.</li>
+                            </ul>
+                            <p className="mt-2"><strong>2. Export as Embedded PNG/SVG/PDF (Optional):</strong></p>
+                            <ul className="list-disc list-inside pl-4 text-gray-700">
+                                <li>Go to <code className="bg-gray-200 p-1 rounded">File &gt; Export as &gt; PNG/SVG/PDF</code>.</li>
+                                <li>Enable the “Include a copy of my diagram” option before exporting.</li>
+                                <li>You can later import or drag-and-drop this file back into draw.io to edit.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    {/* Lucidchart Section */}
+                    <div>
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">Editing in Lucidchart</h3>
+                         <div className="space-y-2 text-gray-700">
+                            <p><strong>Step 1: Export from Draw.io</strong></p>
+                            <p>In draw.io, go to <code className="bg-gray-200 p-1 rounded">File &gt; Export as &gt; XML</code> and save the <code className="bg-gray-200 p-1 rounded">.xml</code> file.</p>
+                            <p><strong>Step 2: Import into Lucidchart</strong></p>
+                            <p>In Lucidchart, go to <code className="bg-gray-200 p-1 rounded">File &gt; Import Diagram &gt; Draw.io</code> and upload your file.</p>
+                        </div>
+                    </div>
+                </div>
+                 <div className="flex justify-end items-center p-4 border-t bg-gray-50 rounded-b-2xl">
+                    <button onClick={onClose} className="bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg shadow hover:bg-indigo-700 transition-all">
+                        Close
+                    </button>
                 </div>
             </div>
         </div>
+    );
+};
+
+
+// --- Draw.io Editor Component (Full-Screen Modal) ---
+const DrawioEditor = ({ xml, onBack, diagramName }) => {
+    const [showHelp, setShowHelp] = useState(false);
+    return (
+        <>
+            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 sm:p-6 lg:p-10">
+                <div className="w-full h-full bg-white rounded-2xl shadow-2xl flex flex-col border-2 border-gray-300 overflow-hidden">
+                    <div className="flex justify-between items-center p-4 border-b bg-gray-50 flex-shrink-0">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-800 truncate">{diagramName}</h3>
+                        <div className="flex items-center gap-4">
+                             <button
+                                onClick={() => setShowHelp(true)}
+                                className="flex items-center gap-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-blue-700 transition-all"
+                            >
+                                <HelpCircle className="w-5 h-5" />
+                                <span>How to Save</span>
+                            </button>
+                            <button
+                                onClick={onBack}
+                                className="flex items-center gap-2 bg-[#13294B] text-white font-bold py-2 px-4 rounded-lg shadow hover:bg-[#1C4A50] transition-all"
+                            >
+                                <X className="w-5 h-5" />
+                                <span>Close Editor</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div className="flex-grow w-full h-full bg-gray-100">
+                        <DrawIoEmbed
+                            xml={xml}
+                            urlParameters={{ ui: 'kennedy', spin: 1, zoom: '1', noExitBtn: 1 }}
+                        />
+                    </div>
+                </div>
+            </div>
+            {showHelp && <HowToSaveModal onClose={() => setShowHelp(false)} />}
+        </>
     );
 };
 
