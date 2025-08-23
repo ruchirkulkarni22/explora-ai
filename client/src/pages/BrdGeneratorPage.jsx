@@ -2,7 +2,8 @@
 // I've updated this file to include an option for downloading the anonymization package.
 
 import React, { useState, useCallback, useRef } from 'react';
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import api from '../api/axios'; 
 import { FileText, UploadCloud, ChevronLeft, AlertCircle, Download, Sparkles, Workflow, Square, CheckSquare, XCircle, Edit, X, Send, Loader2, KeyRound, HelpCircle } from 'lucide-react';
 // Make sure to install it: npm install react-drawio
 import { DrawIoEmbed } from 'react-drawio';
@@ -330,7 +331,8 @@ const SuccessDisplay = ({ onReset, generatedArtifacts, onEditDiagram }) => {
 };
 
 // --- Main Page Component ---
-export default function BrdGeneratorPage({ onBack }) {
+export default function BrdGeneratorPage() {
+    const navigate = useNavigate();
     const [pageState, setPageState] = useState('generator');
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -391,7 +393,9 @@ export default function BrdGeneratorPage({ onBack }) {
         formData.append('artifacts', JSON.stringify(artifactsToRequest));
 
         try {
-            const response = await axios.post('http://localhost:3001/api/generate-brd', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+            const response = await api.post('/generate-brd', formData, { 
+                headers: { 'Content-Type': 'multipart/form-data' } 
+            });
             
             setReqId(response.data.reqId);
             setGeneratedArtifacts(response.data.artifacts);
@@ -415,7 +419,7 @@ export default function BrdGeneratorPage({ onBack }) {
         const baseName = selectedFiles[0].name.split('.')[0];
         
         try {
-            const response = await axios.post('http://localhost:3001/api/refine-flow', {
+            const response = await api.post('/refine-flow', {
                 reqId,
                 originalText,
                 context,
@@ -451,12 +455,18 @@ export default function BrdGeneratorPage({ onBack }) {
                 />
             )}
             <div className={`${pageState === 'diagramEditor' ? 'hidden' : ''}`}>
-                <button onClick={onBack} className="flex items-center text-gray-600 font-semibold mb-8 hover:text-gray-800 transition-colors"><ChevronLeft className="w-5 h-5 mr-2" />Back to Home</button>
+                <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 px-4 py-2 mb-8 font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                    Back to Home
+                </button>
                 <div className="text-center mb-12">
                     <h1 className="text-4xl md:text-5xl font-extrabold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-[#13294B] to-[#006BA6]">
                         BRD & Process Flow Generation
                     </h1>
-                    <p className="text-lg text-gray-500 max-w-3xl mx-auto">Upload your documents and select which artifacts you'd like our AI to generate.</p>
+                    <p className="text-lg text-gray-500 max-w-3xl mx-auto">Upload Zoom or Teams meeting transcripts and select which artifacts you'd like to generate.</p>
                 </div>
 
                 {isLoading && <LoadingProgress />}

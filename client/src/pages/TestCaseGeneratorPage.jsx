@@ -1,6 +1,7 @@
 // clientVite/src/TestCaseGeneratorPage.jsx
 import React, { useState, useCallback, useRef } from "react";
-import axios from "axios";
+import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
 import {
   UploadCloud,
   ChevronLeft,
@@ -251,7 +252,8 @@ const SuccessDisplay = ({ generatedFile, onDownload, onReset }) => {
   );
 };
 
-export default function TestCaseGeneratorPage({ onBack }) {
+export default function TestCaseGeneratorPage() {
+  const navigate = useNavigate();
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -317,11 +319,11 @@ export default function TestCaseGeneratorPage({ onBack }) {
     });
     try {
       setLoadingMessage("Scanning documents and generating test cases...");
-      const response = await axios.post(
-        "http://localhost:3001/api/generate-test-cases",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
+      const response = await api.post(
+                '/generate-test-cases',
+                formData,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
       setGeneratedFile(response.data);
       setIsSuccess(true);
     } catch (err) {
@@ -376,10 +378,10 @@ export default function TestCaseGeneratorPage({ onBack }) {
   return (
     <div>
       <button
-        onClick={onBack}
-        className="flex items-center text-gray-600 font-semibold mb-8 hover:text-gray-800 transition-colors"
+        onClick={() => navigate('/')}
+        className="flex items-center gap-2 px-4 py-2 mb-8 font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
       >
-        <ChevronLeft className="w-5 h-5 mr-2" />
+        <ChevronLeft className="w-5 h-5" />
         Back to Home
       </button>
       <div className="text-center mb-12">
