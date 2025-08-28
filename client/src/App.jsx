@@ -1,19 +1,20 @@
 // client/src/App.jsx
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, lazy, Suspense } from 'react';
 import { Routes, Route, useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from './context/AuthContext';
+import { Loader2 } from 'lucide-react'; // For the loading fallback
 
-// --- Page Imports ---
-import LandingPage from './pages/LandingPage';
-import BrdGeneratorPage from './pages/BrdGeneratorPage';
-import TestCaseGeneratorPage from './pages/TestCaseGeneratorPage';
-import TrainingDeckGeneratorPage from './pages/TrainingDeckGeneratorPage';
-import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
-import AdminDashboardPage from './pages/AdminDashboardPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import ProtectedRoute from './components/ProtectedRoute';
+// --- MODIFIED: Dynamically import all page and route components ---
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const BrdGeneratorPage = lazy(() => import('./pages/BrdGeneratorPage'));
+const TestCaseGeneratorPage = lazy(() => import('./pages/TestCaseGeneratorPage'));
+const TrainingDeckGeneratorPage = lazy(() => import('./pages/TrainingDeckGeneratorPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const SignupPage = lazy(() => import('./pages/SignupPage'));
+const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 
 // --- Icon Imports ---
 import { LogOut, BarChart3 } from 'lucide-react';
@@ -91,6 +92,13 @@ const Footer = () => (
     </footer>
 );
 
+// --- NEW: Create a loading fallback component for Suspense ---
+const LoadingFallback = () => (
+    <div className="flex justify-center items-center h-96">
+        <Loader2 className="w-10 h-10 animate-spin text-teal-600" />
+    </div>
+);
+
 
 export default function App() {
     return (
@@ -98,22 +106,25 @@ export default function App() {
             {/* --- FIX: Uncommented the Header and Footer --- */}
             <Header />
             <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <Routes>
-                    {/* Public Routes */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/signup" element={<SignupPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+                {/* --- MODIFIED: Wrap Routes in Suspense --- */}
+                <Suspense fallback={<LoadingFallback />}>
+                    <Routes>
+                        {/* Public Routes */}
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/signup" element={<SignupPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-                    {/* Protected Routes */}
-                    <Route path="/" element={<ProtectedRoute><LandingPage /></ProtectedRoute>} />
-                    <Route path="/brd-generator" element={<ProtectedRoute><BrdGeneratorPage /></ProtectedRoute>} />
-                    <Route path="/test-case-generator" element={<ProtectedRoute><TestCaseGeneratorPage /></ProtectedRoute>} />
-                    <Route path="/training-deck-generator" element={<ProtectedRoute><TrainingDeckGeneratorPage /></ProtectedRoute>} />
-                    
-                    {/* Admin Only Route */}
-                    <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboardPage /></ProtectedRoute>} />
-                </Routes>
+                        {/* Protected Routes */}
+                        <Route path="/" element={<ProtectedRoute><LandingPage /></ProtectedRoute>} />
+                        <Route path="/brd-generator" element={<ProtectedRoute><BrdGeneratorPage /></ProtectedRoute>} />
+                        <Route path="/test-case-generator" element={<ProtectedRoute><TestCaseGeneratorPage /></ProtectedRoute>} />
+                        <Route path="/training-deck-generator" element={<ProtectedRoute><TrainingDeckGeneratorPage /></ProtectedRoute>} />
+                        
+                        {/* Admin Only Route */}
+                        <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminDashboardPage /></ProtectedRoute>} />
+                    </Routes>
+                </Suspense>
             </main>
             <Footer />
         </div>

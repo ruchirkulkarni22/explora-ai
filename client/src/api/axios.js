@@ -1,26 +1,19 @@
 // client/src/api/axios.js
 import axios from 'axios';
 
-// Create a custom axios instance with a base URL for our backend
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL + '/api',
+  withCredentials: true,
 });
 
-// Axios Interceptor: This is a powerful feature that runs before every API request.
-// It automatically attaches the user's authentication token to the request headers.
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            // If a token exists, add it to the 'Authorization' header
-            config.headers['Authorization'] = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        // Handle any request errors
-        return Promise.reject(error);
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401 && !error.config.url.endsWith('/auth/me')) {
+        window.location.href = '/login';
     }
+    return Promise.reject(error);
+  }
 );
 
 export default api;

@@ -1,7 +1,7 @@
 # server/ppt_analyzer.py
-# NEW FILE: This script performs the core AI logic for matching test cases to PowerPoints.
-# It's called by server.js and communicates over stdin/stdout.
-# UPDATE V2: Added Confidence Levels, refined duplicate detection, and improved low-score handling.
+# This script performs the core AI logic for matching test cases to PowerPoints.
+# It's called by the Node.js server and communicates over stdin/stdout.
+# This version includes confidence levels, duplicate detection, robust validation, and performance optimizations.
 
 import sys
 import os
@@ -12,8 +12,19 @@ import torch
 import json
 import io
 
+# --- Centralized configuration for thresholds ---
+# This makes it easier to adjust the matching sensitivity in one place.
+SIMILARITY_CONFIDENCE_THRESHOLDS = {
+    "high": 0.7,
+    "medium": 0.5,
+    "low": 0.3
+}
+DUPLICATE_DESCRIPTION_THRESHOLD = 0.85
+
 def read_ppt_content(ppt_path):
-    """Extracts all text from a PowerPoint presentation."""
+    """
+    Extracts all text from a PowerPoint presentation, handling potential errors gracefully.
+    """
     try:
         prs = Presentation(ppt_path)
         text_runs = []
@@ -26,16 +37,19 @@ def read_ppt_content(ppt_path):
                         text_runs.append(run.text)
         return " ".join(text_runs)
     except Exception as e:
+        # Log a warning to stderr so Node.js can see it, but don't crash the script.
         print(f"Warning: Could not read {os.path.basename(ppt_path)}. Error: {e}", file=sys.stderr)
         return ""
 
 def get_confidence_level(score):
-    """Categorizes a similarity score into a confidence level."""
-    if score >= 0.7:
+    """
+    Categorizes a similarity score into a human-readable confidence level.
+    """
+    if score >= SIMILARITY_CONFIDENCE_THRESHOLDS["high"]:
         return "High"
-    elif score >= 0.5:
+    elif score >= SIMILARITY_CONFIDENCE_THRESHOLDS["medium"]:
         return "Medium"
-    elif score >= 0.3:
+    elif score >= SIMILARITY_CONFIDENCE_THRESHOLDS["low"]:
         return "Low"
     else:
         return "No confident match"
@@ -45,14 +59,15 @@ def main(knowledge_repo_path, excel_buffer):
     Main function to perform the analysis.
     - Loads a pre-trained sentence transformer model.
     - Reads all PPTs from the knowledge repository.
-    - Reads the user-uploaded Excel file from a buffer.
+    - Validates and reads the user-uploaded Excel file from a buffer.
     - Encodes text from both sources into vector embeddings.
     - Computes similarity and finds the best match for each test case.
     - Handles duplicates, adds confidence levels, and formats the output as JSON.
     """
+    # Load the sentence transformer model. This might download the model on the first run.
     model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    # 1. Process all PowerPoints
+    # 1. Process all PowerPoints from the knowledge repository folder.
     ppt_contents = {}
     for filename in os.listdir(knowledge_repo_path):
         if filename.endswith(".pptx"):
@@ -62,31 +77,45 @@ def main(knowledge_repo_path, excel_buffer):
                 ppt_contents[filename] = content
     
     if not ppt_contents:
-        print(json.dumps({"error": "No readable PowerPoint files found."}), file=sys.stdout)
+        print(json.dumps({"error": "No readable PowerPoint files found in the repository."}), file=sys.stdout)
         sys.exit(1)
 
-    # 2. Read the uploaded Excel file
+    # 2. Read and robustly validate the uploaded Excel file.
     try:
-        df = pd.read_excel(excel_buffer, header=0, usecols=[0, 1])
-        df.columns = ['Test Case ID', 'Test Case Description']
+        df = pd.read_excel(excel_buffer, header=0)
+        # Clean column names to be case-insensitive and ignore whitespace.
+        df.columns = [col.strip() for col in df.columns]
+        required_cols = ['Test Case ID', 'Test Case Description']
+        
+        if not all(col in df.columns for col in required_cols):
+            missing = ", ".join([col for col in required_cols if col not in df.columns])
+            print(json.dumps({"error": f"Excel file is missing required columns: {missing}"}), file=sys.stdout)
+            sys.exit(1)
+
+        # Ensure we only work with the columns we need.
+        df = df[required_cols]
         df.dropna(subset=['Test Case Description'], inplace=True)
+        if df.empty:
+            print(json.dumps({"error": "No valid test case descriptions found in the Excel file."}), file=sys.stdout)
+            sys.exit(1)
         test_cases = df['Test Case Description'].tolist()
     except Exception as e:
-        print(json.dumps({"error": f"Failed to read Excel file. Details: {e}"}), file=sys.stdout)
+        print(json.dumps({"error": f"Failed to read or validate the Excel file. Details: {e}"}), file=sys.stdout)
         sys.exit(1)
 
-    # 3. Create embeddings
-    ppt_filenames = list(ppt_contents.keys())
-    ppt_texts = list(ppt_contents.values())
-    ppt_embeddings = model.encode(ppt_texts, convert_to_tensor=True)
-    test_case_embeddings = model.encode(test_cases, convert_to_tensor=True)
+    # 3. Create embeddings using torch.no_grad() for a performance boost.
+    # This tells PyTorch not to calculate gradients, which is unnecessary for inference.
+    with torch.no_grad():
+        ppt_filenames = list(ppt_contents.keys())
+        ppt_texts = list(ppt_contents.values())
+        ppt_embeddings = model.encode(ppt_texts, convert_to_tensor=True)
+        test_case_embeddings = model.encode(test_cases, convert_to_tensor=True)
 
-    # 4. Compute cosine similarity
-    cosine_scores = util.cos_sim(test_case_embeddings, ppt_embeddings)
+        # 4. Compute cosine similarity between all test cases and all PowerPoints.
+        cosine_scores = util.cos_sim(test_case_embeddings, ppt_embeddings)
 
-    # 5. Find the best match and add enhanced logic
+    # 5. Find the best match for each test case and apply enhanced logic.
     results = []
-    # Use a dictionary to track the original test case that first matched a PPT
     first_match_for_ppt = {}
 
     for i, row in df.iterrows():
@@ -103,22 +132,23 @@ def main(knowledge_repo_path, excel_buffer):
         note = ""
         final_ppt_match = best_ppt_filename
 
-        # Handle low confidence matches
+        # Handle low confidence matches by providing a clear message.
         if confidence == "No confident match":
             final_ppt_match = "No relevant deck found"
             note = "The top match score was too low for a confident recommendation."
-        # Handle duplicate detection for confident matches
+        # Handle duplicate detection for confident matches.
         elif best_ppt_filename in first_match_for_ppt:
             original_match_info = first_match_for_ppt[best_ppt_filename]
             original_match_desc = original_match_info['description']
             
-            # To check for duplication, we compare the current test case description
+            # To check for duplication, compare the current test case description
             # with the description of the *first* test case that matched this PPT.
-            desc_embeddings = model.encode([test_case_desc, original_match_desc], convert_to_tensor=True)
-            desc_similarity = util.cos_sim(desc_embeddings[0], desc_embeddings[1]).item()
+            with torch.no_grad():
+                desc_embeddings = model.encode([test_case_desc, original_match_desc], convert_to_tensor=True)
+                desc_similarity = util.cos_sim(desc_embeddings[0], desc_embeddings[1]).item()
             
-            # If descriptions are very similar, flag as a duplicate
-            if desc_similarity > 0.85:
+            # If descriptions are very similar, flag as a potential duplicate.
+            if desc_similarity > DUPLICATE_DESCRIPTION_THRESHOLD:
                  note = f"Semantically similar to Test Case ID '{original_match_info['id']}'. Same PPT recommended."
         else:
             # This is the first time we've seen a confident match for this PPT. Record it.
@@ -129,11 +159,11 @@ def main(knowledge_repo_path, excel_buffer):
             "Test Case Description": test_case_desc,
             "Matched PPT": final_ppt_match,
             "Similarity Score": f"{similarity_score:.2f}",
-            "Confidence Level": confidence, # New column
+            "Confidence Level": confidence,
             "Note": note
         })
 
-    # 6. Output results as a JSON string to stdout
+    # 6. Output results as a JSON string to stdout, which Node.js will capture.
     print(json.dumps(results, indent=4))
 
 if __name__ == "__main__":
@@ -142,6 +172,7 @@ if __name__ == "__main__":
         sys.exit(1)
         
     knowledge_repo_path = sys.argv[1]
+    # Read the Excel file content from standard input as a binary buffer.
     excel_buffer = io.BytesIO(sys.stdin.buffer.read())
     
     main(knowledge_repo_path, excel_buffer)

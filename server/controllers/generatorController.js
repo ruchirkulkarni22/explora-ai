@@ -3,7 +3,10 @@
 // refactored into exported functions.
 
 // --- Required Modules ---
-const fs = require('fs');
+// Use the promises API for modern async/await syntax with file operations.
+const fs = require('fs').promises;
+// Use a separate import for synchronous functions to avoid confusion.
+const fsSync = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const mammoth = require('mammoth');
@@ -792,6 +795,30 @@ const aiConfig = {
 // --- Helper Functions ---
 // ===================================================================================
 
+/**
+ * Sanitizes a filename by removing potentially unsafe characters.
+ * @param {string} filename - The original filename.
+ * @returns {string} The sanitized filename.
+ */
+const sanitizeFilename = (filename) => {
+    return filename.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+};
+
+/**
+ * Deletes temporary files created by multer's diskStorage.
+ * @param {Array|Object} files - A single file object or an array of file objects from req.file or req.files.
+ */
+const cleanupFiles = (files) => {
+    if (!files) return;
+    const filesArray = Array.isArray(files) ? files : [files];
+    filesArray.forEach(file => {
+        if (file && file.path) {
+            // Asynchronously unlink (delete) the file and log any errors.
+            fs.unlink(file.path).catch(err => console.error(`Failed to delete temp file: ${file.path}`, err));
+        }
+    });
+};
+
 const escapeRegExp = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const sanitizeTextForFlowchart = (text) => {
@@ -803,10 +830,20 @@ const sanitizeTextForFlowchart = (text) => {
         .join('\n');
 };
 
-// --- FIX: This function is updated to handle 'application/octet-stream' ---
+/**
+ * **MODIFIED FOR DISK STORAGE**
+ * Asynchronously reads the content of an uploaded file from its temporary path on disk.
+ * @param {Object} file - The file object from multer (containing a `path`).
+ * @returns {Promise<string>} The extracted text content of the file.
+ */
 const getFileContent = async (file) => {
-    if (!file) throw new Error("File not provided to getFileContent function.");
-    const { buffer, mimetype } = file;
+    if (!file || !file.path) {
+        throw new Error("File path not provided to getFileContent function.");
+    }
+    const { path: filePath, mimetype } = file;
+    // Read the file from the disk into a buffer.
+    const buffer = await fs.readFile(filePath);
+
     if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         return (await mammoth.extractRawText({ buffer })).value;
     } else if (['text/plain', 'text/markdown', 'text/csv'].includes(mimetype)) {
@@ -815,7 +852,6 @@ const getFileContent = async (file) => {
         throw new Error(`Unsupported file type: ${mimetype}.`);
     }
 };
-
 
 const createDocxBufferFromMarkdown = async (markdownText) => {
     if (typeof markdownText !== 'string') {
@@ -1311,6 +1347,9 @@ const generateBrd = async (req, res) => {
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate:`, error);
         res.status(500).json({ error: error.message });
+    } finally {
+        // --- NEW: Cleanup temporary files ---
+        cleanupFiles(req.files);
     }
 };
 
@@ -1507,6 +1546,9 @@ const generateTestCases = async (req, res) => {
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate-test-cases:`, error);
         res.status(500).json({ error: error.message || "An unknown server error occurred." });
+    } finally {
+        // --- NEW: Cleanup temporary files ---
+        cleanupFiles(req.files);
     }
 };
 
@@ -1522,11 +1564,16 @@ const generateTrainingDeck = async (req, res) => {
     try {
         console.log(`[${reqId}] --- TRAINING DECK ANALYSIS STARTED ---`);
         const { pythonPath, scriptPath } = aiConfig.pptAnalyzer;
-        const knowledgeRepoPath = path.join(__dirname, 'Knowledge_Repository');
+        const knowledgeRepoPath = path.join(__dirname, '..', 'Knowledge_Repository'); // Adjusted path
 
-        if (!fs.existsSync(knowledgeRepoPath)) throw new Error("Knowledge_Repository folder not found.");
-        const pptFiles = fs.readdirSync(knowledgeRepoPath).filter(f => f.endsWith('.pptx'));
-        if (pptFiles.length === 0) throw new Error("No PowerPoint files found in Knowledge_Repository.");
+        // **ERROR FIX**: Use `fsSync` for synchronous file system checks.
+        if (!fsSync.existsSync(knowledgeRepoPath)) {
+            throw new Error("Knowledge_Repository folder not found.");
+        }
+        const pptFiles = fsSync.readdirSync(knowledgeRepoPath).filter(f => f.endsWith('.pptx'));
+        if (pptFiles.length === 0) {
+            throw new Error("No PowerPoint files found in Knowledge_Repository.");
+        }
 
         const pythonProcess = spawn(pythonPath, [scriptPath, knowledgeRepoPath]);
         let scriptOutput = '', scriptError = '';
@@ -1534,6 +1581,9 @@ const generateTrainingDeck = async (req, res) => {
         pythonProcess.stderr.on('data', (data) => { scriptError += data.toString(); });
 
         pythonProcess.on('close', async (code) => {
+            // --- NEW: Cleanup the single uploaded file inside the callback ---
+            cleanupFiles(req.file);
+
             if (code !== 0) {
                 console.error(`[${reqId}] Python script error: ${scriptError}`);
                 return res.status(500).json({ error: `Analysis failed: ${scriptError}` });
@@ -1549,10 +1599,12 @@ const generateTrainingDeck = async (req, res) => {
                 }
 
                 const zip = new jszip();
+                // **ERROR FIX**: Use fsSync for existsSync inside the loop as well.
                 for (const pptFile of matchedPptFiles) {
                     const filePath = path.join(knowledgeRepoPath, pptFile);
-                    if (fs.existsSync(filePath)) {
-                        zip.file(pptFile, fs.readFileSync(filePath));
+                    if (fsSync.existsSync(filePath)) {
+                        const fileData = await fs.readFile(filePath); // async read is correct here
+                        zip.file(pptFile, fileData);
                     }
                 }
 
@@ -1564,7 +1616,8 @@ const generateTrainingDeck = async (req, res) => {
 
                 const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
 
-                const originalName = req.file.originalname.replace('.xlsx', '');
+                // --- MODIFIED: Sanitize the output filename ---
+                const originalName = sanitizeFilename(req.file.originalname.replace('.xlsx', ''));
                 const uniqueId = uuidv4().slice(0,8);
                 const fileName = `Matched_Decks_${originalName}_${uniqueId}.zip`;
 
@@ -1582,12 +1635,16 @@ const generateTrainingDeck = async (req, res) => {
             }
         });
 
-        pythonProcess.stdin.write(req.file.buffer);
+        // **MODIFICATION**: Read the uploaded file from its temp path and pipe to the Python script.
+        const fileBuffer = await fs.readFile(req.file.path);
+        pythonProcess.stdin.write(fileBuffer);
         pythonProcess.stdin.end();
 
     } catch (error) {
         console.error(`[${reqId}] Error in /api/generate-training-deck:`, error);
         res.status(500).json({ error: error.message });
+        // --- NEW: Ensure cleanup even if initial setup fails ---
+        cleanupFiles(req.file);
     }
 };
 
@@ -1596,5 +1653,5 @@ module.exports = {
     generateBrd,
     refineFlow,
     generateTestCases,
-    generateTrainingDeck,
+    generateTrainingDeck
 };

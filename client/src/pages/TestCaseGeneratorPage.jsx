@@ -25,6 +25,7 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
       setIsDragging(true);
     }
   };
+
   const handleDragLeave = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -33,6 +34,7 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
       setIsDragging(false);
     }
   };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -43,10 +45,12 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
       e.dataTransfer.clearData();
     }
   };
+
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
   };
+
   return (
     <div className="w-full max-w-2xl mx-auto">
       <label
@@ -92,7 +96,8 @@ const FileUploader = ({ onFileSelect, selectedFiles, onFileRemove }) => {
         className="sr-only"
         multiple
         onChange={(e) => onFileSelect(e.target.files)}
-        accept=".docx,.txt,.md"
+        // MODIFIED: Corrected the accept attribute for clarity and correctness
+        accept=".docx,.txt,.md,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
       />
       {selectedFiles.length > 0 && (
         <div className="mt-6">
@@ -149,6 +154,7 @@ const LoadingSpinner = ({ message }) => (
     <p className="text-indigo-700 font-semibold mt-2">{message}</p>
   </div>
 );
+
 const ErrorDisplay = ({ message, onRetry }) => (
   <div className="bg-red-50 border-l-4 border-red-400 p-6 rounded-lg max-w-3xl mx-auto">
     <div className="flex">
@@ -168,6 +174,7 @@ const ErrorDisplay = ({ message, onRetry }) => (
     </div>
   </div>
 );
+
 const SuccessDisplay = ({ generatedFile, onDownload, onReset }) => {
   const previewData = generatedFile.preview || [];
   const PriorityBadge = ({ priority }) => {
@@ -268,25 +275,55 @@ export default function TestCaseGeneratorPage() {
     setIsSuccess(false);
     setGeneratedFile(null);
   }, []);
+
   const handleFileSelect = (files) => {
-    if (files) {
-      const newFiles = Array.from(files);
-      const uniqueNewFiles = newFiles.filter(
-        (newFile) =>
-          !selectedFiles.some(
-            (existingFile) =>
-              existingFile.name === newFile.name &&
-              existingFile.size === newFile.size
-          )
-      );
-      setSelectedFiles((prevFiles) => [...prevFiles, ...uniqueNewFiles]);
-    }
-  };
+        if (files) {
+            const newFiles = Array.from(files);
+            
+            // --- NEW: Validation Logic ---
+            const allowedTypes = [
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
+                "text/plain", // .txt
+                "text/markdown" // .md
+            ];
+            const maxSize = 10 * 1024 * 1024; // 10 MB
+
+            const validatedFiles = newFiles.filter(file => {
+                if (!allowedTypes.includes(file.type)) {
+                    setError(`Invalid file type: ${file.name}. Only .docx, .txt, and .md are allowed.`);
+                    return false;
+                }
+                if (file.size > maxSize) {
+                    setError(`File is too large: ${file.name}. Maximum size is 10 MB.`);
+                    return false;
+                }
+                return true;
+            });
+            // --- End of Validation Logic ---
+
+            const uniqueNewFiles = validatedFiles.filter(
+                (newFile) =>
+                !selectedFiles.some(
+                    (existingFile) =>
+                    existingFile.name === newFile.name &&
+                    existingFile.size === newFile.size
+                )
+            );
+            
+            if (uniqueNewFiles.length > 0) {
+                setError(null); // Clear previous errors if new valid files are added
+            }
+
+            setSelectedFiles((prevFiles) => [...prevFiles, ...uniqueNewFiles]);
+        }
+    };
+
   const handleFileRemove = (indexToRemove) => {
     setSelectedFiles((prevFiles) =>
       prevFiles.filter((_, index) => index !== indexToRemove)
     );
   };
+  
   const handleDownload = () => {
     if (!generatedFile) return;
     const byteCharacters = atob(generatedFile.content);
@@ -305,6 +342,7 @@ export default function TestCaseGeneratorPage() {
     link.parentNode.removeChild(link);
     window.URL.revokeObjectURL(url);
   };
+
   const handleSubmit = async () => {
     if (selectedFiles.length === 0) {
       setError("Please select at least one file.");
@@ -336,6 +374,7 @@ export default function TestCaseGeneratorPage() {
       setIsLoading(false);
     }
   };
+
   const renderContent = () => {
     if (isLoading) {
       return <LoadingSpinner message={loadingMessage} />;

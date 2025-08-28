@@ -5,7 +5,7 @@ const LogSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
-        ref: 'User', // This creates a reference to the User model
+        ref: 'User',
     },
     apiEndpoint: {
         type: String,
@@ -26,6 +26,21 @@ const LogSchema = new mongoose.Schema({
     errorMessage: {
         type: String,
     },
+    // New field for observability and request tracing
+    requestId: {
+        type: String,
+    },
+    // New field for performance monitoring
+    latency: {
+        type: Number, // in milliseconds
+    }
 });
+
+// --- Add Indexes for Performance ---
+// These will speed up queries on the admin dashboard.
+LogSchema.index({ timestamp: -1 });
+LogSchema.index({ user: 1 });
+LogSchema.index({ apiEndpoint: 1 });
+
 
 module.exports = mongoose.model('Log', LogSchema);

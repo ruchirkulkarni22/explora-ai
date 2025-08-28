@@ -215,20 +215,30 @@ export default function TrainingDeckGeneratorPage() {
     setIsSuccess(false);
     setGeneratedFile(null);
   }, []);
+
   const handleFileSelect = (file) => {
-    if (file) {
-      if (
-        file.type ===
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      ) {
-        setSelectedFile(file);
-        setError(null);
-      } else {
-        setError("Invalid file type. Please upload a .xlsx file.");
-        setSelectedFile(null);
-      }
-    }
+        if (file) {
+            // --- NEW: Validation Logic ---
+            const allowedType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            const maxSize = 5 * 1024 * 1024; // 5 MB
+
+            if (file.type !== allowedType) {
+                setError("Invalid file type. Please upload a .xlsx file.");
+                setSelectedFile(null);
+                return;
+            }
+            if (file.size > maxSize) {
+                setError(`File is too large: ${file.name}. Maximum size is 5 MB.`);
+                setSelectedFile(null);
+                return;
+            }
+            // --- End of Validation Logic ---
+
+            setSelectedFile(file);
+            setError(null); // Clear any previous errors on valid selection
+        }
   };
+
   const handleFileRemove = () => setSelectedFile(null);
   
   // *** FIXED THE DOWNLOAD LOGIC HERE ***
@@ -295,6 +305,7 @@ export default function TrainingDeckGeneratorPage() {
       setIsLoading(false);
     }
   };
+  
   const renderContent = () => {
     if (isLoading) {
       return <LoadingSpinner message={loadingMessage} />;
