@@ -40,7 +40,7 @@ CRITICAL PROCESS NARRATIVE REQUIREMENTS
 CURRENT STATE OVERVIEW:
 Write clear, step-by-step description of how work flows today, in a logical manner.
 
-FUTURE STATE VISION: 
+FUTURE STATE VISION:
 Write step-by-step description of improved workflow after changes, step by step logically.
 
 Process Writing Format:
@@ -56,7 +56,7 @@ Poor Example:
 ACTOR IDENTIFICATION RULES
 =======================
 • Use specific job titles: "Sales Manager" not "user" or "someone"
-• Use exact system names: "Oracle ERP" not "the system"  
+• Use exact system names: "Oracle ERP" not "the system"
 • Limit to 3 main actors per process (consolidate related roles)
 • Group similar tasks under same actor using logic
 • Be consistent with naming throughout document
@@ -90,7 +90,7 @@ ANALYTICAL FRAMEWORK
 
 2. Requirement Classification (MoSCoW):
 • Must-Have (Critical): Essential for project success
-• Should-Have (Important): Significant value but not critical  
+• Should-Have (Important): Significant value but not critical
 • Could-Have (Nice-to-Have): Desirable but not essential
 • Won't-Have (Out of Scope): Explicitly excluded from current scope
 
@@ -132,7 +132,7 @@ HANDLING MISSING INFORMATION
 =======================
 When source materials lack details:
 1. Mark assumptions clearly: "ASSUMPTION: Manager approval required for amounts over $500"
-2. Use placeholders: "TBD: Requires stakeholder input on approval timeframes"  
+2. Use placeholders: "TBD: Requires stakeholder input on approval timeframes"
 3. Make reasonable assumptions based on standard business practices
 4. Highlight gaps that need clarification: "CLARIFICATION NEEDED: Integration method between systems"
 5. Recommend specific questions for stakeholders
@@ -178,7 +178,7 @@ const BRD_MARKDOWN_TEMPLATE = `
 
 ## 3. Business Objectives
 - **Primary Goal**: [Main objective from source materials]
-- **Secondary Goals**: 
+- **Secondary Goals**:
   - [Objective 2 from source materials]
   - [Objective 3 from source materials]
 
@@ -200,51 +200,51 @@ const BRD_MARKDOWN_TEMPLATE = `
 ## 6. Current State Overview
 
 ### Process Overview
-**Trigger**: [Specific event that starts the process]  
-**End State**: [Final outcome or deliverable]  
+**Trigger**: [Specific event that starts the process]
+**End State**: [Final outcome or deliverable]
 **Primary Actors**: [Actor 1], [Actor 2], [System Name] *(Maximum 3 actors)*
 
 ### Current State Process Flow
 
-**Process Initiation**  
-When [specific trigger event occurs], the [Primary Actor Role] receives [specific input/notification] via [system/channel]. The [Actor] accesses [System Name] and creates [specific record type] containing [required data fields]. 
+**Process Initiation**
+When [specific trigger event occurs], the [Primary Actor Role] receives [specific input/notification] via [system/channel]. The [Actor] accesses [System Name] and creates [specific record type] containing [required data fields].
 
-**Validation and Assessment**  
+**Validation and Assessment**
 The [Actor/System] validates the request by checking [specific validation criteria]. If [condition A is met], the request advances to [Next Actor/Process]. If [condition B occurs], the system triggers [alternative action] and routes back to [Previous Actor] with [specific feedback/notification].
 
-**Review and Decision**  
+**Review and Decision**
 [Decision-Making Actor] opens [System Name] and reviews [specific data elements/documentation]. They evaluate the request against [decision criteria] and must respond within [specific timeframe]. Approved requests proceed to [Next Step/Actor], while rejected requests return to [Previous Actor] with [reason codes/feedback].
 
-**Processing and Execution**  
-Upon approval, [Processing Actor] performs [specific actions] using [System/Tool Name]. The system updates [data fields/status] and generates [outputs/notifications] sent to [recipient list]. 
+**Processing and Execution**
+Upon approval, [Processing Actor] performs [specific actions] using [System/Tool Name]. The system updates [data fields/status] and generates [outputs/notifications] sent to [recipient list].
 
-**Completion and Notification**  
+**Completion and Notification**
 The process concludes when [final deliverable] is [completion action]. The system sends [completion notifications] to [stakeholder list] and updates [tracking systems] with final status.
 
 ### Current State Pain Points
 - **[Pain Point Category]**: [Specific inefficiency from source materials]
-- **[Bottleneck Area]**: [Specific delay/constraint from source materials]  
+- **[Bottleneck Area]**: [Specific delay/constraint from source materials]
 - **[Error-Prone Process]**: [Specific quality issue from source materials]
 
 ## 7. Future State Vision
 
 ### Process Overview
-**Trigger**: [Optimized/automated trigger event]  
-**End State**: [Enhanced final outcome]  
+**Trigger**: [Optimized/automated trigger event]
+**End State**: [Enhanced final outcome]
 **Primary Actors**: [Streamlined Actor 1], [Enhanced System], [Actor 2 if needed] *(Maximum 3 actors)*
 
 ### Future State Process Flow
 
-**Automated Initiation**  
+**Automated Initiation**
 When [trigger event occurs], the enhanced [System Name] automatically detects the event and creates [record type] by pulling data from [integrated sources]. The system validates [criteria] using [business rules engine] and routes to [appropriate actor] based on [intelligent routing logic].
 
-**Streamlined Processing**  
+**Streamlined Processing**
 [Primary Actor] receives [consolidated dashboard view] with all relevant information pre-populated. They review [enhanced data presentation] and make decisions using [decision support tools] within [reduced timeframe]. The system provides [real-time guidance/recommendations].
 
-**Intelligent Workflow Management**  
+**Intelligent Workflow Management**
 Approved requests trigger [automated workflow] that simultaneously updates [multiple integrated systems]. The system executes [automated actions], generates [required documents/outputs], and sends [targeted notifications] to [relevant stakeholders]. Exception cases automatically escalate to [designated actor].
 
-**Enhanced Completion and Reporting**  
+**Enhanced Completion and Reporting**
 The optimized process delivers [final outcome] in [target timeframe], reducing total processing time from [current duration] to [future duration]. Automated reporting provides [real-time visibility] and [performance metrics] to [management stakeholders].
 
 ### Future State Benefits
@@ -372,9 +372,9 @@ The optimized process delivers [final outcome] in [target timeframe], reducing t
 | [Name] | [Compliance Officer] | _________________ | _____ |
 
 ---
-**Document Status**: Draft for Review  
-**Next Review Date**: [Date + 2 weeks]  
-**Distribution**: [Complete stakeholder list]  
+**Document Status**: Draft for Review
+**Next Review Date**: [Date + 2 weeks]
+**Distribution**: [Complete stakeholder list]
 **Confidentiality**: [Internal Use Only/Confidential]
 `;
 
@@ -382,33 +382,65 @@ const PROCESS_TO_DRAWIO_XML_PROMPT = `You are a Process Diagramming Expert who c
 
 GOAL: Convert process descriptions into Draw.io XML that creates clean, professional flowcharts.
 
-EXPECTED OUTPUT: Valid Draw.io XML code that can be directly imported via Arrange → Insert → Advanced → XML.
+EXPECTED OUTPUT: Valid Draw.io XML code that can be directly imported via Arrange → Insert → Advanced → XML. The XML MUST use a 1920×1080 page and horizontal swimlanes (rows).
 
 =======================
-PROCESS FLOW TYPES
+ABSOLUTE XML RULES (NON-NEGOTIABLE)
 =======================
-- As-Is Flow: Current state processes (derive from existing workflows)
-- To-Be Flow: Future state processes (derive from desired improvements)
+To prevent the "Could not add object mxGeometry" error, you MUST follow these rules perfectly:
+1.  **<mxGeometry> MUST be a direct child of <mxCell>:** Every single <mxGeometry> tag must be nested immediately inside its parent <mxCell>. No exceptions.
+2.  **<root> can ONLY contain <mxCell>:** The <root> tag must ONLY have <mxCell> tags as its direct children. Do not place <mxGeometry>, <Array>, or <mxPoint> directly under <root>.
+3.  **Waypoints (<Array>) are for EDGES ONLY:** If you use <Array as="points"> for waypoints, it MUST be nested inside the <mxGeometry> of a connector/edge <mxCell>. It cannot be a child of a shape or the root.
+
+Correct Structure Example:
+<root>
+    <mxCell id="0"/>
+    <mxCell id="1" parent="0"/>
+    <mxCell id="shape1" vertex="1" parent="1">
+        <mxGeometry as="geometry"/>  <!-- CORRECT: mxGeometry is a child of mxCell -->
+    </mxCell>
+    <mxCell id="edge1" edge="1" parent="1">
+        <mxGeometry as="geometry"> <!-- CORRECT: mxGeometry is a child of mxCell -->
+            <Array as="points">      <!-- CORRECT: Array is a child of mxGeometry for an EDGE -->
+                <mxPoint x="100" y="100"/>
+            </Array>
+        </mxGeometry>
+    </mxCell>
+</root>
+
+Incorrect Structure Example (DO NOT DO THIS):
+<root>
+    <mxCell id="shape1" vertex="1" parent="1"/>
+    <mxGeometry for="shape1"/> <!-- WRONG: mxGeometry is not a child of mxCell -->
+</root>
 
 =======================
-SWIMLANE GUIDELINES
+SWIMLANE GUIDELINES (MANDATORY)
 =======================
-- Use swimlanes when processes involve multiple actors/systems
-- Maximum 3 swimlanes (most processes need 1-2)
-- Each swimlane = one primary responsible party
-- Skip swimlanes for simple, single-actor processes
-- Consolidate similar roles (e.g., "Sales Rep" + "Sales Manager" → "Sales Team")
+- Always use HORIZONTAL swimlanes (rows).
+- Implement a single Pool containing 1–3 Lane(s).
+- Lane headers must be on the LEFT side (set style horizontal=0).
+- Each lane = one primary responsible party.
+- All shapes belonging to a party must be children of that lane.
 
 =======================
-REQUIRED XML STRUCTURE
+PAGE/CANVAS SETTINGS (MANDATORY)
+=======================
+- Page size must be 1920 (width) × 1080 (height).
+- On <mxGraphModel>, set page="1" pageWidth="1920" pageHeight="1080" pageScale="1".
+- Keep all content within 1920×1080.
+- Leave a 40px margin (usable area: x∈[40,1880], y∈[40,1040]).
+
+=======================
+REQUIRED XML SKELETON
 =======================
 <mxfile host="drawio" version="1.0">
   <diagram id="process" name="Process Flow">
-    <mxGraphModel dx="1200" dy="800" grid="1" guides="1" arrows="1" connect="1" fold="1" page="1">
+    <mxGraphModel dx="1200" dy="800" grid="1" guides="1" arrows="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <!-- Your diagram elements here -->
+        <!-- All other elements are <mxCell> only -->
       </root>
     </mxGraphModel>
   </diagram>
@@ -418,70 +450,67 @@ REQUIRED XML STRUCTURE
 SHAPE TEMPLATES
 =======================
 
-Swimlane:
-<mxCell id="sw1" value="Actor Name" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=14;horizontal=0" vertex="1" parent="1">
-  <mxGeometry x="0" y="0" width="300" height="600" as="geometry"/>
+Pool (container for horizontal lanes):
+<mxCell id="pool1" value="Process Pool" style="swimlane;startSize=30;horizontal=0;childLayout=stackLayout;resizeParent=1;resizeLast=0;collapsible=0;rounded=0;html=1;whiteSpace=wrap;fillColor=#ffffff;strokeColor=#000000;fontStyle=1;fontSize=14" vertex="1" parent="1">
+  <mxGeometry x="40" y="40" width="1840" height="1000" as="geometry"/>
+</mxCell>
+
+Lane (row; header on the left):
+<mxCell id="lane1" value="Actor / System" style="swimlane;startSize=30;horizontal=0;resizeParent=1;collapsible=0;rounded=0;html=1;whiteSpace=wrap;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13" vertex="1" parent="pool1">
+  <mxGeometry x="0" y="0" width="1840" height="333" as="geometry"/>
 </mxCell>
 
 Start Event (Green ellipse 120x60):
-<mxCell id="start1" value="Start" style="ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="sw1">
-  <mxGeometry x="60" y="60" width="120" height="60" as="geometry"/>
+<mxCell id="start1" value="Start" style="ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1" vertex="1" parent="lane1">
+  <mxGeometry x="120" y="40" width="120" height="60" as="geometry"/>
 </mxCell>
 
 Process Task (Blue rectangle 180x80):
-<mxCell id="task1" value="Task Name" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="sw1">
-  <mxGeometry x="60" y="160" width="180" height="80" as="geometry"/>
+<mxCell id="task1" value="Task Name" style="rounded=1;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11" vertex="1" parent="lane1">
+  <mxGeometry x="280" y="40" width="180" height="80" as="geometry"/>
 </mxCell>
 
 Decision (Yellow diamond 140x80):
-<mxCell id="decision1" value="Decision?" style="rhombus;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11" vertex="1" parent="sw1">
-  <mxGeometry x="60" y="260" width="140" height="80" as="geometry"/>
+<mxCell id="decision1" value="Decision?" style="rhombus;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11" vertex="1" parent="lane1">
+  <mxGeometry x="500" y="40" width="140" height="80" as="geometry"/>
 </mxCell>
 
 End Event (Red ellipse 120x60):
-<mxCell id="end1" value="End" style="ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;strokeWidth=3" vertex="1" parent="sw1">
-  <mxGeometry x="60" y="380" width="120" height="60" as="geometry"/>
+<mxCell id="end1" value="End" style="ellipse;html=1;whiteSpace=wrap;align=center;verticalAlign=middle;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontStyle=1;strokeWidth=3" vertex="1" parent="lane1">
+  <mxGeometry x="680" y="40" width="120" height="60" as="geometry"/>
 </mxCell>
 
-Connector:
-<mxCell id="connector1" edge="1" parent="1" source="task1" target="decision1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeWidth=1.5;endArrow=classic">
+Connector (orthogonal):
+<mxCell id="edge1" edge="1" parent="1" source="task1" target="decision1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;orthogonalLoop=1;jettySize=auto;strokeWidth=1.5;endArrow=classic">
   <mxGeometry relative="1" as="geometry"/>
+</mxCell>
+
+Edge Label (attach to edge by making the label a vertex child of the EDGE CELL):
+<mxCell id="edge1label" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="edge1">
+  <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-10"/></mxGeometry>
 </mxCell>
 
 =======================
 LAYOUT RULES
 =======================
-- Top-to-bottom primary flow, left-to-right for handoffs
-- Snap to 20px grid for alignment
-- Minimum 80px vertical spacing between elements
-- Elements must fit completely within their swimlanes
-- Use orthogonal connectors only
-- Label decision branches clearly (Yes/No, Approved/Rejected, etc.)
-- Avoid connector crossings - use waypoints: <Array as="points"><mxPoint x="..." y="..."/></Array>
-
-=======================
-CRITICAL XML REQUIREMENTS
-=======================
-- Geometry must be nested: <mxGeometry x="..." y="..." width="..." height="..." as="geometry"/>
-- Swimlane children must have parent="swimlane_id"
-- Top-level elements have parent="1"
-- Never use inline geometry attributes
-- All shapes need vertex="1", all connectors need edge="1"
-- For edge waypoints, use: <Array as="points"><mxPoint x="..." y="..."/></Array>
-- For edge labels, use: <mxGeometry relative="1" as="geometry"><mxPoint as="offset" x="0" y="-10"/></mxGeometry>
+- Flow direction: top-to-bottom within a lane, left-to-right for cross-lane handoffs.
+- Snap to a 20px grid for alignment.
+- Minimum 80px vertical spacing between stacked elements in the same lane.
+- Elements must fit COMPLETELY within their lane bounds.
+- Use orthogonal connectors only. Avoid crossings.
 
 =======================
 ERROR HANDLING
 =======================
-If process description lacks sufficient detail, output:
+If process description lacks sufficient detail, output the following error XML:
 <mxfile host="drawio" version="1.0">
   <diagram id="error" name="Error">
-    <mxGraphModel dx="1200" dy="800" grid="1" guides="1" arrows="1" connect="1" fold="1" page="1">
+    <mxGraphModel dx="1200" dy="800" grid="1" guides="1" arrows="1" connect="1" fold="1" page="1" pageScale="1" pageWidth="1920" pageHeight="1080">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
-        <mxCell id="error" value="Error: Process description needs more detail.&#xa;&#xa;Please provide:&#xa;• Specific roles/actors&#xa;• Clear step sequence&#xa;• Decision points&#xa;• System interactions" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12" vertex="1" parent="1">
-          <mxGeometry x="200" y="200" width="400" height="200" as="geometry"/>
+        <mxCell id="errorBox" value="Error: Process description needs more detail.&#xa;&#xa;Please provide:&#xa;• Specific roles/actors&#xa;• Clear step sequence&#xa;• Decision points&#xa;• System interactions" style="rounded=1;html=1;whiteSpace=wrap;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12" vertex="1" parent="1">
+          <mxGeometry x="760" y="440" width="400" height="200" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
@@ -504,6 +533,8 @@ OUTPUT REQUIREMENTS
 =======================
 Respond with ONLY the XML code - no explanations, no markdown formatting, no surrounding text.
 The XML must open flawlessly in Draw.io via Arrange → Insert → Advanced → XML.`;
+
+
 
 
 const SECTION_EXTRACTOR_PROMPT = `You are a precision Document Analysis AI specialized in extracting specific sections from structured business documents with 100% accuracy.
@@ -561,7 +592,7 @@ PARAGRAPH 1 - PROBLEM & BUSINESS CASE:
 
 PARAGRAPH 2 - SOLUTION & APPROACH:
 - Describe the proposed solution approach at executive level
-- Highlight key capabilities and strategic differentiators  
+- Highlight key capabilities and strategic differentiators
 - Outline implementation methodology and timeline
 
 PARAGRAPH 3 - VALUE & OUTCOMES:
@@ -713,7 +744,6 @@ OUTPUT REQUIREMENTS:
 Generate comprehensive, production-ready test cases now. Output ONLY the valid JSON array.`;
 
 
-// configuration settings for AI providers
 const aiConfig = {
     entityExtractionProvider: 'spacy',
     brdGenerationProvider: 'gemini',
@@ -723,10 +753,10 @@ const aiConfig = {
 
     gemini: {
         apiKey: process.env.GEMINI_API_KEY,
-        brdGenerationModel: 'gemini-2.5-flash-lite',
-        flowGenerationModel: 'gemini-2.5-flash-lite',
-        sectionExtractionModel: 'gemini-2.5-flash-lite',
-        testCaseGenerationModel: 'gemini-2.5-flash-lite',
+        brdGenerationModel: 'gemini-1.5-flash',
+        flowGenerationModel: 'gemini-1.5-flash',
+        sectionExtractionModel: 'gemini-1.5-flash',
+        testCaseGenerationModel: 'gemini-1.5-flash',
         apiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
     },
     openai: {
@@ -773,6 +803,7 @@ const sanitizeTextForFlowchart = (text) => {
         .join('\n');
 };
 
+// --- FIX: This function is updated to handle 'application/octet-stream' ---
 const getFileContent = async (file) => {
     if (!file) throw new Error("File not provided to getFileContent function.");
     const { buffer, mimetype } = file;
@@ -784,6 +815,7 @@ const getFileContent = async (file) => {
         throw new Error(`Unsupported file type: ${mimetype}.`);
     }
 };
+
 
 const createDocxBufferFromMarkdown = async (markdownText) => {
     if (typeof markdownText !== 'string') {
@@ -819,7 +851,7 @@ const createDocxBufferFromMarkdown = async (markdownText) => {
             const tableRows = [];
             const headerCells = line.split('|').slice(1, -1).map(cell => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: cell.trim(), bold: true })] })] }));
             tableRows.push(new TableRow({ children: headerCells, tableHeader: true }));
-            
+
             i += 2;
             while (i < lines.length && lines[i].trim().startsWith('|')) {
                 const bodyCells = lines[i].split('|').slice(1, -1).map(cell => new TableCell({ children: [new Paragraph(cell.trim())] }));
@@ -838,7 +870,7 @@ const createDocxBufferFromMarkdown = async (markdownText) => {
             docChildren.push(new Paragraph(""));
         }
     }
-    const doc = new Document({ 
+    const doc = new Document({
         numbering: {
             config: [
                 {
@@ -856,7 +888,7 @@ const createDocxBufferFromMarkdown = async (markdownText) => {
                 },
             ],
         },
-        sections: [{ properties: {}, children: docChildren }] 
+        sections: [{ properties: {}, children: docChildren }]
     });
     return Packer.toBuffer(doc);
 };
@@ -887,14 +919,28 @@ const parseInlineFormatting = (line) => {
 // ===================================================================================
 // --- AI Model Adapters ---
 // ===================================================================================
+const handleApiResponse = async (response, serviceName) => {
+    if (!response.ok) {
+        let errorBody;
+        try {
+            errorBody = await response.json();
+        } catch (e) {
+            errorBody = { error: { message: "Failed to parse error response from API." } };
+        }
+        console.error(`[ERROR] ${serviceName} API Error:`, JSON.stringify(errorBody, null, 2));
+        throw new Error(`${serviceName} failed with status ${response.status}: ${errorBody.error?.message || response.statusText}`);
+    }
+    return response.json();
+};
+
 
 const extractSectionWithAI = async (fullBrdText, sectionDescription) => {
     console.log(`Intelligently extracting '${sectionDescription}' section using AI...`);
     const provider = aiConfig.sectionExtractionProvider;
     const { apiKey, apiBaseUrl, sectionExtractionModel, siteUrl, appName } = aiConfig[provider];
-    
+
     const fullPrompt = `${SECTION_EXTRACTOR_PROMPT}"${sectionDescription}"\n\nDOCUMENT:\n${fullBrdText}`;
-    
+
     let response;
     if (provider === 'gemini') {
         const apiUrl = `${apiBaseUrl}/${sectionExtractionModel}:generateContent?key=${apiKey}`;
@@ -909,10 +955,9 @@ const extractSectionWithAI = async (fullBrdText, sectionDescription) => {
         response = await fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify({ model: sectionExtractionModel, messages: [{ role: "user", content: fullPrompt }] }) });
     }
 
-    if (!response.ok) throw new Error(`${provider} Section Extraction failed: ${response.statusText}`);
-    const result = await response.json();
+    const result = await handleApiResponse(response, `${provider} Section Extraction`);
     const extractedText = provider === 'gemini' ? result.candidates?.[0]?.content?.parts?.[0]?.text : result.choices?.[0]?.message?.content;
-    
+
     if (!extractedText || extractedText.trim().length < 10) {
         console.error("AI section extraction returned little or no content. Full BRD was:\n", fullBrdText);
         throw new Error(`AI failed to reliably extract the '${sectionDescription}' section.`);
@@ -929,9 +974,8 @@ const generateSummaryFromText = async (text) => {
     const fullPrompt = `${SUMMARY_EXTRACTOR_PROMPT}\n\nDOCUMENT:\n${text}`;
     const apiUrl = `${apiBaseUrl}/${sectionExtractionModel}:generateContent?key=${apiKey}`;
     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: fullPrompt }] }] }) });
-    
-    if (!response.ok) throw new Error(`${provider} Summary Generation failed: ${response.statusText}`);
-    const result = await response.json();
+
+    const result = await handleApiResponse(response, `${provider} Summary Generation`);
     const summaryText = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!summaryText || summaryText.trim().length < 10) {
@@ -970,7 +1014,7 @@ const extractEntitiesWithSpacyAdapter = async (text) => {
 const generateBRDWithGeminiAdapter = async (anonymizedContent) => {
     const { apiKey, apiBaseUrl, brdGenerationModel } = aiConfig.gemini;
     const apiUrl = `${apiBaseUrl}/${brdGenerationModel}:generateContent?key=${apiKey}`;
-    
+
     const fullPrompt = `${BRD_SYSTEM_PROMPT}
 ---
 HERE IS THE BRD TEMPLATE TO USE FOR YOUR OUTPUT. GENERATE HIGH-QUALITY OUTPUT AFTER CONSIDERING THE BELOW TEMPLATE:
@@ -981,8 +1025,9 @@ ${anonymizedContent}`;
 
     const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
     const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-    if (!response.ok) throw new Error(`Gemini BRD generation failed with status ${response.status}`);
-    const result = await response.json();
+
+    const result = await handleApiResponse(response, "Gemini BRD generation");
+
     if (!result.candidates?.[0]?.content?.parts?.[0]?.text) throw new Error("Gemini BRD generation returned an empty response.");
     return result.candidates[0].content.parts[0].text;
 };
@@ -1004,7 +1049,7 @@ const generateWithChatCompletionAdapter = async (provider, systemPrompt, userPro
         headers['HTTP-Referer'] = siteUrl;
         headers['X-Title'] = appName;
     }
-    
+
     const messages = [];
     if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
     messages.push({ role: "user", content: userPrompt });
@@ -1012,8 +1057,7 @@ const generateWithChatCompletionAdapter = async (provider, systemPrompt, userPro
     const payload = { model, messages };
     const response = await fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
 
-    if (!response.ok) throw new Error(`${provider} generation failed with status ${response.statusText}`);
-    const result = await response.json();
+    const result = await handleApiResponse(response, `${provider} generation`);
     if (!result.choices?.[0]?.message?.content) throw new Error(`${provider} generation returned an empty response.`);
     return result.choices[0].message.content;
 };
@@ -1029,8 +1073,7 @@ const generateDrawioXmlFromProcessDescription = async (processDescription, conte
         const { apiKey, apiBaseUrl, flowGenerationModel } = aiConfig.gemini;
         const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
         const response = await fetch(`${apiBaseUrl}/${flowGenerationModel}:generateContent?key=${apiKey}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!response.ok) throw new Error(`Gemini Flow generation failed: ${response.statusText}`);
-        const result = await response.json();
+        const result = await handleApiResponse(response, "Gemini Flow generation");
         rawResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } else { // Handles 'openai' and 'openrouter'
         rawResponse = await generateWithChatCompletionAdapter(provider, null, fullPrompt);
@@ -1038,7 +1081,7 @@ const generateDrawioXmlFromProcessDescription = async (processDescription, conte
 
     const xmlMatch = rawResponse.match(/<mxfile[\s\S]*?<\/mxfile>/);
     const cleanedResponse = xmlMatch ? xmlMatch[0] : '';
-    
+
     if (!cleanedResponse) {
         console.error("[ERROR] AI response for Draw.io XML did not contain a valid <mxfile> block. Raw response:", rawResponse);
         throw new Error("The AI failed to return a parsable Draw.io XML structure.");
@@ -1057,7 +1100,7 @@ const generateDrawioXmlFromProcessDescription = async (processDescription, conte
 const extractEntities = async (text) => {
     const provider = aiConfig.entityExtractionProvider;
     console.log(`Using provider: ${provider} for entity extraction.`);
-    
+
     switch(provider) {
         case 'spacy':
             return await extractEntitiesWithSpacyAdapter(text);
@@ -1070,7 +1113,7 @@ const extractEntities = async (text) => {
 const generateBRD = async (anonymizedContent) => {
     const provider = aiConfig.brdGenerationProvider;
     console.log(`Using provider: ${provider} for BRD generation.`);
-    
+
     const userPrompt = `HERE IS THE BRD TEMPLATE TO USE FOR YOUR OUTPUT. POPULATE IT BASED ON THE TRANSCRIPT:
 ${BRD_MARKDOWN_TEMPLATE}
 ---
@@ -1167,7 +1210,7 @@ const generateBrd = async (req, res) => {
             zip.file('redaction_key.csv', csvContent);
 
             const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-            
+
             generatedResults.anonymizationData = {
                 type: 'zip',
                 fileName: `${baseName}_Anonymization_Package.zip`,
@@ -1189,18 +1232,18 @@ const generateBrd = async (req, res) => {
                 const regex = new RegExp(`\\b${escapeRegExp(code)}\\b`, 'g');
                 brdText = brdText.replace(regex, original);
             }
-            
+
             executiveSummary = await extractSectionWithAI(brdText, "Executive Summary");
 
             console.log(`[${reqId}] Creating BRD .docx file...`);
             const docxBuffer = await createDocxBufferFromMarkdown(brdText);
             generatedResults.brd = { type: 'docx', fileName: `${baseName}_BRD.docx`, content: docxBuffer.toString('base64'), contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' };
-        
+
         } else if (flowsRequested) {
             // If only flows are requested, we still need a summary for context.
             console.log(`[${reqId}] BRD not requested. Generating summary from source for flow context...`);
             const anonymizedSummary = await generateSummaryFromText(anonymizedCombinedContent);
-            
+
             // De-anonymize the summary
             executiveSummary = anonymizedSummary;
             for (let [code, original] of masterMapping.entries()) {
@@ -1219,7 +1262,7 @@ const generateBrd = async (req, res) => {
                     const asIsText = await extractSectionWithAI(brdText, "Current State Overview");
                     const sanitizedAsIsText = sanitizeTextForFlowchart(asIsText);
                     const drawioResult = await generateDrawioXmlFromProcessDescription(sanitizedAsIsText, executiveSummary);
-                    
+
                     if (drawioResult.error === 'insufficient_content') {
                         return { key: 'asisFlow', value: { type: 'drawio', needsRefinement: true, flowType: 'asisFlow', originalText: sanitizedAsIsText, context: executiveSummary, message: drawioResult.message } };
                     } else {
@@ -1320,7 +1363,7 @@ const generateTestCases = async (req, res) => {
 
         console.log(`[${reqId}] Anonymizing document content...`);
         const { anonymizedText, mapping } = await anonymizeText(combinedOriginalContent);
-        
+
         // No longer saving reference archive locally
 
         console.log(`[${reqId}] Calling AI with V3 prompt to generate test cases...`);
@@ -1330,8 +1373,8 @@ const generateTestCases = async (req, res) => {
         const fullPrompt = `${TEST_CASE_SYSTEM_PROMPT}\n\n${userPromptForAI}`;
         const payload = { contents: [{ role: "user", parts: [{ text: fullPrompt }] }] };
         const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        if (!response.ok) throw new Error(`Gemini Test Case generation failed with status ${response.status}`);
-        const result = await response.json();
+
+        const result = await handleApiResponse(response, "Gemini Test Case generation");
         const rawJsonResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!rawJsonResponse) throw new Error("AI returned an empty or invalid response for test cases.");
 
@@ -1512,7 +1555,7 @@ const generateTrainingDeck = async (req, res) => {
                         zip.file(pptFile, fs.readFileSync(filePath));
                     }
                 }
-                
+
                 const workbook = xlsx.utils.book_new();
                 const worksheet = xlsx.utils.json_to_sheet(results);
                 worksheet['!cols'] = [ { wch: 15 }, { wch: 50 }, { wch: 40 }, { wch: 15 }, { wch: 20 }, { wch: 50 } ];
@@ -1520,11 +1563,11 @@ const generateTrainingDeck = async (req, res) => {
                 zip.file("Matching_Report.xlsx", xlsx.write(workbook, { bookType: 'xlsx', type: 'buffer' }));
 
                 const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
-                
+
                 const originalName = req.file.originalname.replace('.xlsx', '');
                 const uniqueId = uuidv4().slice(0,8);
                 const fileName = `Matched_Decks_${originalName}_${uniqueId}.zip`;
-                
+
                 // Send the buffer directly to the client instead of saving locally
                 res.status(200).json({
                     fileName: fileName,

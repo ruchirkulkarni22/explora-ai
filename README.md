@@ -6,6 +6,23 @@ Through an intuitive conversational interface, business analysts, project manage
 
 ---
 
+## Usage
+
+Start client:
+
+```bash
+VITE_API_URL=http://192.168.5.242:3001 npm run dev -- --host=0.0.0.0
+```
+
+Start server:
+
+```bash
+source venv/bin/activate
+node server.js
+```
+
+---
+
 ## Key Features
 
 Explora AI offers a suite of powerful, interconnected tools accessible through a single, intelligent chat interface.
