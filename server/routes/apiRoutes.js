@@ -1,12 +1,11 @@
 // server/routes/apiRoutes.js
-// This file now contains all the generator logic, protected by authentication.
+// This file now contains all the generator logic without authentication.
 
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs'); // ERROR FIX: Add this line to import the fs module
-const { protect, logApiCall } = require('../middleware/authMiddleware');
+const fs = require('fs');
 
 // --- NEW: Define allowed file types ---
 const allowedFileTypes = {
@@ -64,38 +63,28 @@ const uploadExcel = multer({
     fileFilter: fileFilter(allowedFileTypes.excel)
 });
 
-// --- Protected API Routes ---
-// The `protect` middleware runs first, ensuring the user is logged in.
-// The `logApiCall` middleware runs next, logging the request.
-// Then, the actual generator function runs.
+// --- API Routes (no authentication required) ---
+// All routes are directly accessible without authentication middleware
 
 router.post(
     '/generate-brd',
-    protect,
-    logApiCall,
     uploadDocs.array('files', 10), // Use uploadDocs
     generateBrd
 );
 
 router.post(
     '/refine-flow',
-    protect,
-    logApiCall,
     refineFlow
 );
 
 router.post(
     '/generate-test-cases',
-    protect,
-    logApiCall,
     uploadDocs.array('files', 10), // Use uploadDocs
     generateTestCases
 );
 
 router.post(
     '/generate-training-deck',
-    protect,
-    logApiCall,
     uploadExcel.single('file'), // Use uploadExcel
     generateTrainingDeck
 );

@@ -8,7 +8,8 @@ const fs = require('fs').promises;
 // Use a separate import for synchronous functions to avoid confusion.
 const fsSync = require('fs');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
+// Simple ID generator function to replace uuid
+const generateId = () => `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 const mammoth = require('mammoth');
 const { Document, Packer, Paragraph, TextRun, HeadingLevel, Table, TableRow, TableCell, WidthType } = require('docx');
 const { spawn } = require('child_process');
@@ -1178,7 +1179,7 @@ const anonymizeText = async (text) => {
     ];
     allEntities.sort((a, b) => b.name.length - a.name.length);
     allEntities.forEach(entity => {
-        const code = `${entity.type}_${uuidv4().substring(0, 8).toUpperCase()}`;
+        const code = `${entity.type}_${generateId().split('-')[1].toUpperCase()}`;
         const escapedEntity = escapeRegExp(entity.name);
         const regex = new RegExp(`\\b${escapedEntity}\\b`, 'g');
         if (anonymizedText.match(regex)) {
@@ -1195,7 +1196,7 @@ const anonymizeText = async (text) => {
 // ===================================================================================
 
 const generateBrd = async (req, res) => {
-    const reqId = uuidv4().slice(0, 8);
+    const reqId = generateId().split('-')[1];
     console.log(`[${reqId}] Received request for /api/generate-brd with ${req.files.length} file(s).`);
     if (!req.files || req.files.length === 0) return res.status(400).json({ error: 'No files uploaded.' });
 
@@ -1386,7 +1387,7 @@ const refineFlow = async (req, res) => {
 };
 
 const generateTestCases = async (req, res) => {
-    const reqId = uuidv4().slice(0, 8);
+    const reqId = generateId().split('-')[1];
     console.log(`[${reqId}] Received request for /api/generate-test-cases with ${req.files.length} file(s).`);
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: 'No files uploaded.' });
@@ -1553,7 +1554,7 @@ const generateTestCases = async (req, res) => {
 };
 
 const generateTrainingDeck = async (req, res) => {
-    const reqId = uuidv4().slice(0, 8);
+    const reqId = generateId().split('-')[1];
     console.log(`[${reqId}] Received request for /api/generate-training-deck.`);
 
     if (!req.file) return res.status(400).json({ error: 'No Excel file uploaded.' });
@@ -1618,7 +1619,7 @@ const generateTrainingDeck = async (req, res) => {
 
                 // --- MODIFIED: Sanitize the output filename ---
                 const originalName = sanitizeFilename(req.file.originalname.replace('.xlsx', ''));
-                const uniqueId = uuidv4().slice(0,8);
+                const uniqueId = generateId().split('-')[1];
                 const fileName = `Matched_Decks_${originalName}_${uniqueId}.zip`;
 
                 // Send the buffer directly to the client instead of saving locally

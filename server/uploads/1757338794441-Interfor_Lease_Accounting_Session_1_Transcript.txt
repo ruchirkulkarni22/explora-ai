@@ -1,0 +1,368 @@
+
+And, hopefully, yeah. So I just wanted to introduce Mahesh Shinde. He will be the technical consultant for this project. So he is on call right now. Hey, Mahesh.
+
+Hey. Hi. Hey. Good morning. I think some issue with my camera right now.
+
+That's okay. Okay. Say hi. Hi, all. Okay.
+
+You guys are able to see my PDF document? Yes. Okay. On the top of the stack, whatever you are this is the application landscape. Again, this also is not, like, fully fully find out.
+
+At least from whatever Oracle's footprint extended footprint, this should give you an idea. I'll start from the top. LumberTrack is our AR system of record. We don't use Oracle AR. We use a application called LumberTrack.
+
+This is specific to the lumber industry where, our customer information, sales orders, everything is maintained in that application. Because lumber is around the product or a flat product, It is sold by MBF. Right? So there is a specific unit of measure in which lumber is sold. Oracle, it cannot do all of that.
+
+It's calculation based on it can. We need to design the application such a way, but this this application comes ready made available for lumber industry sales processing. So that is why our AR system of record and sales orders are sitting within that system. Second one, we used to have a system called Eclipse, but we don't have it. We have retired that application, so I'm not going to talk into that.
+
+LIMS application is called log inventory management system. So all the inventory is managed in that application called LIMS. What this means is, Interfort's business is very simple. I'm a, we have license for a big forest to go and cut trees. Right?
+
+We get that licenses either from government, if it is a crown corporate crowned land we call it as, then we get that license from the government, respect to provincial government, and sometimes it could be from federal also. There are also private lands from which we can go on countries. Right? So there are two options. So, basically, we have contractors who go to this forest, cut the trees, put it on a truck, bring it to our sawmill.
+
+In the sawmill, we weigh the product and pay for that. Now once we weigh for that product, each and every depending upon this type of tree, which means, like, species, like, teakwood will be more expensive than a normal load. Bermatique will be even more expensive. Cedar will be very, very expensive. Right?
+
+So, based on the species, weight, volume, and the quality also, because we know that this particular place where we harvest trees from has got good quality trees, raw material availability is there. Then we bring that round big log into the sawmill, debark it, because trees will come with the bark, So we debark it. Now you will have a round log without any bark, so it'll be plain and then round. Now there is an optimizer which will tell how you need to cut that round log into small, small lengths. It will give you an optimized way to cut that particular round log.
+
+Now you cut it, and then you go and then package it and sell it. This is the lumber industry business in a very simple term. So whatever is brought from the forest into the weighing scale, limbs will have inventory of all those raw material. Okay? And we have multiple installs of limbs.
+
+It is not a common limbs. We have one in The US South. We have one in Atlantic Region. Atlantic Region covers our New Brunswick operation. We have one in BC operation.
+
+So there are multiple LIMS application we have installed. We have five versions of LIMS running in the company. It's not one common application. Then we used to have one like yeah. Sorry.
+
+Go ahead. Completely. You go you go you go ahead. Go ahead. So this is, like, is it region wise?
+
+So every region will have one LEMS application? Okay. Yeah. They are. Because, there are regulations.
+
+There are a lot of things. And, we also the LIMS application came with the acquisitions as well. For example, there used to be a company called Shalour, which you guys probably if you had time to go into the application exercise provided, there'll be a legal entity called Shaloor Forest Products Limited. That company was an acquired company by Interfor. And when we acquired that company, they had their own version of LIMS running, so we left those LIMS version because it is not easy to transition over all of these logs, inventory, everything.
+
+It's a big, activity, so we have left it. That is why we ended up having so many LIMS version. Okay. Log 400 was a similar application. It is like the legacy application of LIMS.
+
+LIMS was implemented across all the regions. Sometimes it came with the acquisition. Sometimes we have implemented our own version of LIMS. So Log 400 and Eclipse are legacy applications prior to LIMS. So now currently, Log 400 also is not there.
+
+Eclipse also is not there. So we have LumberTrack for AR, LIMS for log inventory, and we have an enterprise data warehouse. So that is an in house built data warehouse. All this data from Lumper Truck, LIMS, EDW, here, EAM is not mentioned. So EAM is also into the mix.
+
+So this is here. In the bottom, you can see EAM. Right? Because the architecture is different. In the bottom, there are applications, which is called SAP Concur and EAM application.
+
+These are cloud application. The top one, what you have is hosted within our data center. The bottom ones are cloud based application. Anyway So Infor AM and Hexagon AM, are they one and the same? Yeah.
+
+Yeah. Okay. Hexagon acquired Infor. Okay. Both are same.
+
+So then, we also use SAP Concur for expense. So currently, we this is the application footprint on the right hand side. It but this is a very nice, what to say, architecture for understanding how data from all the systems flows into Oracle. All of this spaghetti diagram that you are seeing goes into Oracle in some shape or form. High level is for internal, data center hosted application, like on the top, Lumbertruck and LIMS, We get it through something called an integration server.
+
+We bring it to Informatica, and from Informatica, we take it to the SFTP folder of Informatica before taking into Oracle. SAP concurrent info EAM, directly, we take it to SFTP and bring the data into Oracle. On the right hand side, if you see, all of this is interconnected, and it flows through to the ERP cloud through OIC integration. There is no direct connection between any application, anything that flows into Oracle. Always the data that flows into Oracle is through OIC with the exception of EPM, which uses the ERP adapter that Oracle gives out of the box.
+
+One more, even Bank of Canada daily, we bring exchange rates, so that funnels through Oracle Integration Cloud and goes into ERP. Similarly, you can see bank statements. Bank statements are the only integration which does not flow through ORC because we have host to host connection for all the banks. We operate with Wells Fargo, RBC, and TD. So those are directly flowing into Oracle Cash Management for daily bank statement important reconciliation.
+
+A couple of questions, okay. So when you say EPM, what are the modules within Only FCCS. Only FCCS. Okay. And what about the, employees and all human capital?
+
+Is there is a system for that? The EDW system, the integration that comes into Oracle is to meet an employee data, employee and supervisor. And, basically, one more thing. So, do you maintain any budgets, any budget you control? Budget control is not there.
+
+We keep, budgets on Excel spreadsheet. If at all we were to do a project, EPM planning and budgeting will be a project in future. Okay. I was looking more from our current, API optimization. You don't need to worry about don't need to worry about budgeting budgeting budgetary control.
+
+None of that we have, and we don't need it. Okay. And in Oracle, when you say ERP cloud, it is only finance. Right? Purchasing inventory, all that is either in in 4AM or any of these top systems, limbs and so on.
+
+Okay. The modules within ERP are AP fixed assets currently, GL, Oracle projects module, cash management module. That's pretty much it. Oh, so you have PPM also. That is project billing costing management.
+
+Okay. We don't have a full suite. We use only capital projects. Okay. So costing with project costing.
+
+Capital Correct. But there is also one small nuance in the chart of account structure. When I go to the topic, I will talk about it. Okay. And the AR lumber track, that is where all your AR operations will happen.
+
+So those it will be like a summarized journal that will be sent to ARP Cloud via Informatica? Informatica and OIC. Okay. Okay. Any other questions?
+
+I think it is clear to me. I think this gave a good idea too. I will upload this. You guys should have got, access to some, SharePoint or something this morning. You should have received all of you should have received email from Interfor so that it all is set up.
+
+I'll walk through all of this. So this is the master, and this one is each and every system how data flows. It's more detailed. So I will put this on, SharePoint. That's why you're seeing can LIMS Canada integration, LIMS US integration.
+
+So these are all different. So I will put this on, our current SharePoint folder once we go there. Okay. And, supplier, Oracle is a master. Right?
+
+Like you had mentioned in one of our earlier calls. And customer, we are not maintaining it in the RP cloud because we don't have AR. Miscellaneous AR. We do miscellaneous AR in Oracle. Very, very small.
+
+Negligible. Okay. What happens is sometimes we directly sell scrap, for example. We can't put that because it's not technically a product sale. So we don't want to put that in Lumbertruck.
+
+Those kind of miscellaneous AR, we directly bring into Oracle. Okay. And, the tax engine, you don't have any other engine. Right? Besides Oracle, like, Avalara or Vertex or okay.
+
+We have license for Avalara, though. Okay. If we wanted, we can look at that, but, that will be based on let's say, if some requirement Oracle is not able to meet as part of the AP optimization project. Yes. Okay.
+
+Got it. Any other questions on the first topic? No? Okay. No.
+
+So we covered this one, application, landscape, modules, all of this. If there are no questions, I'm going to go to this. Yeah. K. I think we can Number of number of environment is to again, I'm gonna talk only Oracle from here on in terms of application because if I go through everything, it'll take, like, one full day for me to go through it.
+
+Oracle has got four environments, including production. Test and prod are paired together for any kind of upgrades because till production gets upgraded, we need the production version and one more nonproduction version being the same. Right? Because issues could come on a daily basis. We don't want it to be different in terms of patch levels.
+
+So that is why test and prod gets upgraded the same cycle. Like, August is a second month in every quarter is a patching cycle for InterFO, first Friday and third Friday. Okay? We have test, which you guys have access to. We have dev one, and we have dev two.
+
+So those are the three Oracle non production environments, and of course, prod. Okay. So dev one and dev two will follow the same upgrade cycle. So first week of every quarter, and test and production will be third week of every quarter. Correct.
+
+And whenever upgrade happens, we refresh it just before the upgrade happens so that we are testing it on the latest dataset. We do a p to t refresh. Okay. For example, in preparation for August 1, which is the going to be twenty five c upgrade cycle, Dev two will be refreshed on July 27. Mhmm.
+
+So the the instance you have given us access to is the test instance, which will third week, it is going to get, refreshed. August. Correct. Exactly. So don't do any configuration in that environment.
+
+No solution. That is for you to review existing configuration if it all device. Though anything in that work, if you do, it's going to go waste. Mhmm. Okay.
+
+I'll I'll give you an n one probably. I think I'm going to give you, guys dev two environment after the refresh of '27. So until then, it's just four days away. So this f p two cycle that we have planned next month, so which instance will we be using for that? Dev 2.
+
+Dev 2. Okay. Okay. That is anyway going to get, refreshed now. Right?
+
+First week, it is going to get refreshed. On to the sir. See. First week, it is going to be upgraded. Refresh is going to be independent of application upgrade.
+
+Right? Before before the upgrade, we refresh the environments. So Mhmm. Dev two is getting refreshed on July 27. Got it.
+
+Got it. So first week, it is going to get upgraded. Before that, you will Twenty five six. Got it. Okay.
+
+Okay. Any other questions on this? EPM also, we have only two environments. One is non product as part because we use only one model. So it makes sense for us to go for a third environment there.
+
+So one question, okay. Dev one and Dev two, what are the difference? In the sense, what is the purpose of two separate Dev environments? Two separate Dev environments, we have had it because because of our integrations. It's a complex footprint.
+
+Right? So we decided to keep three environments of Oracle non prod. So we pay extra for that. Okay. And now projects only last ten months, we didn't have a project.
+
+However, as we used to have some kind of a project running in Oracle. Because once you give an environment for a project, the project life cycle dictates when you can refresh or when you can change that. Right? So it becomes complex. Then, production, we need to always keep on environment for production support.
+
+So that is why we operate with, three non product ones. Bit of a luxury, but it was a it it was a necessity on, Interforce complex footprint. We used to have another non prod environment, which we deprecated after the project life cycle. We used that for training purposes. Okay.
+
+Temporarily, we process during the project implementation. Okay. So that is the environment, and, this one will be dev two. Okay. K.
+
+After the refresh, I'll give access to that environment on twenty seventh, then you should be good to go. Chart of accounts and calendar. K. Let me go there. Four four five calendar.
+
+Right? And then One adjustment period at the end? Correct. One adjustment period, which is period 13. And that adjustment period, all of you guys are experts, more knowledgeable than me.
+
+It's only for GL. No no other modules. And Jan to December. Right? Jan will be December.
+
+Yeah. So for the benefit of all other team members on this call from, CalPERS, if you talk to me, I can give you everything. If you otherwise, you are dealing with 10 people minimum. So start with me, not that I know everything, but we can come we can do all of this within a shorter duration rather than having multiple sessions. As much as possible and I'm not an like a traditional project manager who manages a schedule or schedules meeting, I'm an in-depth guy.
+
+So I can configure all of this what I'm showing. So application side also I have a deep knowledge. So this is the chart of accounts. The more one important tricky part is this reference. What does this do is Oracle gives one value set called ora underscore p r g value set.
+
+When projects projects needs to be used within the chart of account, do not recommend it. We are aware of it because it needs to be in a separate ledger. Otherwise, you're going to make your GL very thick. Right? But Interfor, knowing this, they decided to go ahead putting the projects as one of the segment.
+
+So the reference is nothing but the projects module. Two types of projects exist in Interfor. One is called a reference code project. In order for analyzing costs, expenses, all of that, Interfor needed the ability to track at that level. Since and they don't want it to do products module because it was too cumbersome for them maintaining the work breakdown structure, putting all the information there.
+
+They thought that we need to have a balance where they wanted to have the ability to book journal entries directly to a project so that they are able to slice the data and analyze the data. That is why this segment was created. Otherwise, behind the scene, what it uses, And another person who is equally knowledgeable, equivalent to me is Vicky. So start with both of us. So we'll be able to cover a lot of ground, then we can go to other team members.
+
+This is the default value set code that Oracle provides out of the box. So you can go and create just a project, and then it'll populate this value set, and, automatically, it will come in the chart of accounts as a value. Okay. So that is one order. So this will cover so for, PPM, you are using for CapEx projects, but there are other projects where this segment will be Got it.
+
+And, you will have some reports of project wise profitability. Those are things you are looking at. Expenses also, we wanted to for example, recently, we we deprecated all the analog phones and completely moved to Microsoft Teams, completely, including phone numbers. So what we did is that project, how who and all is spending what money on that project, everything we should have the ability to track. So at the end of the day, if somebody ask how much did we spend on, MS Teams deployment project, you just go to this from the GL, pull all these values that is associated with this reference code project, you will be able to tell this is the x dollars we spent on this project.
+
+So in SmartView, because all the users have got SmartView also, and GLQ we use very heavily, so people will drag and drop and then immediately those results are very instantaneous. Right? So that is why we have implemented that. Segment security is in place. Another thing which I wanted to caution on chart of account is segment security is in place, and all the segment security is managed through a hierarchy.
+
+K? So when you say segment security, it is all based on role. Right? Like, whatever role somebody has, basis that the access may be restricted for certain segments. Correct.
+
+Exactly. So let me show you. And, again, one more thing, Opeli, on project. So when we get the feed from AR. Right?
+
+That first system that you showed there also, do they populate that reference segment? It is only to track expenses. There nothing on profitability as such. Nothing on profitability. Correct.
+
+Okay. Okay. One word of caution. So I I'm going to operate based on trust. Don't download the report catalog from here.
+
+We developed all custom reports. I know that some companies you take this and then misuse it. Just be careful not to take this custom if you wanna take a query what we have done for all the custom reports, use it by all means, but copy the query from the data model. Don't download the catalog, please. No.
+
+We will not do that. Okay. Rest assured. We won't see security. Okay.
+
+And I I will start at the security console. I'll go back and show how security we are controlling. Okay. Billy, one more question on chart of account. So during our discussions, we spoke about this division wise maintenance of assets.
+
+So is that part of the chart of accounts? No. I'll I'll come to that. Okay. So here, how it is done is anything you see with ifpcom, anything this RCO, RUS, anything you see is nothing but the security.
+
+So, technically, this person, Benita, who is going to be on both our projects, extraordinary, brilliantly brilliant person to work with. She's she's sitting in US South, very soft spoken, very professional, very nice person. So she has access to UCP and UHO. Anything that starts with u start everything is US based. Anything that starts with C, everything is Canada based.
+
+CHO is Canadian head head office. Who is US Head Office. So all the naming conventions you will be able to easily decode without the need to do any kind of a PhD. Okay. This is how it is dictated.
+
+How this is derived is based on this. And this hierarchy is maintained both on the FCCS side as well as on the ERP side. Go to this account hierarchy. It has got all the hierarchies what we do. There are multiple hierarchies for multiple reasons we have developed.
+
+So this is the Southeast mill. So why we have done all of this is suppose if in every in all access for Southeast Mill needs to be given to somebody, we just take this hierarchy and put it that anything starting from here all the way up to any children included within that branch, give all the access. So that is why we have this hierarchy is defined. And for allocations, we use this particular hierarchy. So there is a reason for each and everything, But I am going to explain only one, then you guys review the rest and if you have any questions, more than happy to explain to you further why, what is the background mechanic, why it was created.
+
+Okay. Balan I'm just going through account, I'll also go through company because company segment security is more important. This is the account, hierarchy. So go through it, and then if there are any questions, let us know. Very simple, easy to understand.
+
+Review it. If you have any questions, come back to me. Company legal. So this is the legal structure. I will go through legal structure.
+
+I'll also go through, management structure. Two structures I will go through. Okay. Interfor Consolidated is the topmost parent of everything. K?
+
+Then this is the legal side of things. So whenever you see, these are each one. Interfor corporation owns all these mills. CSE is Canada ACON, Canada Adams Lake, Canada Cascade Reload. All of this is Canada operations under Interfor Corporation.
+
+Similarly, we have operations in Japan, and that has got two company quotes below it or divisions below it. Everybody will use the word division when you come and talk at Interfor. Everybody knows what a division is. Anything to do with sales and marketing will funnel through CSM and CSU. Similarly, IHU is US holdings.
+
+These are some of the divisions within that. And IEL is where all of our East operations are. So this is where both Atlantic, New Brunswick New Brunswick, Ontario, and previously Quebec used to be part of this topmost chain, IEL. So anybody who needs to have access, we control through here because it's very simple. Right?
+
+We start if we say that, only Canada operations, we start with ICP until that all, divisions below ICP give access. If everything all company code needs to be, we just give it at the ICU level. Very simple, in terms of sec security maintenance. And this one is management. So I think now that explains why you have FCCS.
+
+I think the structure is a little complex. Right? The ownership and stuff. Direct equity, shareholder equity, all that, retained earnings, it's all super complex. This hierarchy the other hierarchy is legal entity hierarchy, how the legal entities are all grouped.
+
+This one is a management hierarchy which we use for segment security. Right? So you saw in Vanita's case, she had RCO. Right? So IFP RCO, she had access, which means she has everything.
+
+Okay? So go go through the structures very clear. Anything to do with US operations, you so she also had RUS. So she had this, and she also had this tree. So she'll be able to do transactions for each of these companies.
+
+Again, in US, it's operated by regions. One is the Southeast regions, where all the Southeast mills will come under this particular branch, and the Northwest, which is Pacific side, it'll come under those. Any questions on hierarchy's segment security? So, Upele, question. So the when you said division, it is the previous one that you showed.
+
+This is the management hierarchy that you are showing currently. Okay. Let me That yeah. This is a division. CAC is nothing but our ACON division.
+
+K? The bottom most in this is the division. Okay. Okay. CCW is the Coastal Roadlands.
+
+Under BC Interior, you will have Adams Lake, which is one of our mills, Castle Guard, another mills, Grand Forks, another mill. So this is what the lowest in this hierarchy is the division. And this is in your segment one. Right? This hierarchy is Company segment.
+
+Okay. Any questions so far? I think let's go through it, and then I'm sure you have a You you you guys have access to the application. I'm showing you where to go and what is this one. Then I am also recording the session.
+
+I'll upload the recording so that it is useful for you to refer. K. So that is what okay. We didn't cover chart of chart of accounts we covered. Calendar calendar is 445, but I will go there, and then I will complete So your financial statements are at what I mean, is it even at, a division level?
+
+You have a p and l and balance sheet? Yes. We can generate it at division level. We can generate it at roll up level. Any level we'll be able to generate.
+
+Reports are static. Depending on parameters you choose, the data what you see is going to be different. Okay. And, Adan, Upili, selecting a four four five calendar, is it, like, new, industry specific requirement, or it was just management decision? Intra four has been operating for forty, fifty years.
+
+So for for the last forty, fifty years, they wanted to queue they have been having it as four, four, five. Right? So Specifically That was Yeah. Nothing like industry. You can operate both ways.
+
+Suppose if we go to West Fraser and all, they will operate it, based on man count drops. It also depends upon who start where the company started and what happened. Right? So nothing industry specific, Yvesh. So let me go to the current one.
+
+So this is the current calendar, and this month is going to be here. So it started from June 29. It goes all the way up to August 2, July month. K. Any time end of a month is always a Saturday.
+
+Beginning of the next month is always a Sunday. But, 01/01/2025, that is a Wednesday, is what I see. But that is year end. Right? Year end December calendar always, it's closed on December 31.
+
+Always December will end on thirty first. Okay. Within that Jan first to December 31 is April. We we prepared this entire calendar for fifty years and loaded it because you can't go into the next, this one. If you put, like, Jan fourth or something, then you are taking four days from the next fiscal.
+
+Our fiscal definition is first Jan to thirty first December. That is not changing. Within that, we operate four four five. Got it. Got it.
+
+In some companies, I have seen even, like, first Jan, it we'd missed out on twenty seventh December, twenty eighth December. Okay. Ours is a clean cutoff till December 31. That's a very clean cutoff. So we manually prepared it.
+
+We didn't allow the system to generate it. Okay. Okay. Okay. So it is always first, January to thirty first December.
+
+Inside that, it will be April. That way Correct. If you see, this is 2026. It'll start 01/01/2026. It'll end on '30 01/12/2026.
+
+So every time it will be the same. Start and end date is the same. Okay. And that end date will always be a Saturday? Not if the December month alone, that might be an exception.
+
+Any other questions on that? Two is one two is Saturday, but after that, '22, for instance, will be a Saturday. Or no. It is a Friday. Right?
+
+'20 okay. It is '26 you are saying. Okay. Okay. Yeah.
+
+This '26, if I go back to '25, anything between, the this one, within that from February or not, this will always be a Saturday. This will always be a Saturday, and this will always be a Sunday. Month to beginning will always be a Sunday. Okay. Any other questions on And what are your close cycles?
+
+Like, when do you close APAR GL? Is it, like, Monday you close? Yeah. No. Always this drives everything.
+
+For example, if this is the last day of the month, AP will start two days before that. So it is day minus two. Day minus two. Okay. Mhmm.
+
+K. What I will do is let me do this. I operate very transparently. So if you're seeing my emails and all, that's fine. I don't have a problem, but don't take any information outside.
+
+It's a public limited company, so just be careful. I don't want to be stopping sharing. I don't do any of that. It's very I operate very simple. I operate based on trust.
+
+Yeah. Rest assured, hopefully, we will not take any screenshots. So anyway, we you are sharing whatever info we need. So Yeah. Yeah.
+
+I'm more than happy to share, but I have had my tough times in my, duration, professional carriers. I have seen everything, guys. So so every month, for example, this is July month, but it was already sent on July 21. So ten days in advance before a month end cycle starts, every month, it will be sent. This is the calendar for this month.
+
+Okay. I will forward this just to give you an idea how we operate because this needs to be now altered. One of the artifacts I would expect is for you to do this for lease management and update this closed calendar for us. Because every time we make any changes, we come and ensure that this is all updated. So if you go through this, it will tell activity wise, module wise what due date in Eastern time and Pacific time.
+
+It will tell very, very clearly. And where divisions are involved, it will be marked. Where central team is involved, that will also be marked. No ambiguity, nothing. Everything is clear.
+
+Every month, this goes like a well oiled machine, and we prepared this as part of the project. We put all of this together and then what is but typically, it starts with day minus two. Okay? This is for July, so go through it and corroborate it and let us know. Okay.
+
+So that is taken care of. And I'll put this artifacts. So I did forward that email to you. Right? Yes.
+
+That is done. What is the next one is going to be on our agenda? So we covered these three topics. Any any more questions on those three topics? No.
+
+No. Not for now. Good. Documentation repository. Place to store documentation.
+
+Okay. All of you should have access to this now. First, I will share, then you guys one of you can share, then I will show you where it is. Why did I bring the screen? I need to bring the screen.
+
+Let me swap it. So you should have everything access called Oracle lease accounting. So in that, the files are all stored here. Come on. There it is.
+
+The the structure will follow. Anything to do with requirements here. Anything to do with status report project management, anything should go under this folder. Anything to do with design configuration, everything should go here. Test scripts, testing, anything should go here.
+
+Training documentation, team management should go here. If you guys produce me some documents, I'll put it here. You don't need to use this. If it is not required, any recordings will go here. K?
+
+Very simple structure. This is what we will follow. Can one of you share your screen, Shailesh or Yogesh? I gave access. I just want to be sure what you guys are seeing.
+
+I was about to say, I think, we got the access to Teams. Let me share my screen. Yeah. So here it is. We have this.
+
+But for files, I'm saying, into four SharePoint refused to connect. Interesting. Interesting. So I mean, I'm able to access, Teams. I'm able to see this, but, I'm Just hold on.
+
+Just hold on one second. Let me think through. Go to files again one more time for me, please. Send me a screenshot of this. I need to work with my entire team.
+
+What are you seeing under general? Can you go to general for me? And then go to file, second tab here. I want to see if this is also giving the same problem. Okay.
+
+Let me share another link to you. Just one second. Just one second, Mahesh. Think because Teams is connected to SharePoint. I will counter, this one here, URL.
+
+Try this URL. Start. Yeah. Click on that URL. Let me see what's going on.
+
+This is the problem. Okay. Okay. So, you know, right, Teams and SharePoint is interconnected. Correct.
+
+Correct. Yeah. So on the Teams side, you have access, but not on the SharePoint side. I don't know why. Interesting.
+
+Anyway, send screenshot of this, and then screenshot of the other one as well, then I will work with mine for our team on that. K? Alright. Let me ask, other team members, shall I forward you their email ID? I already did.
+
+Ritika? I already did for everyone. Once I solve for one, all Yes. Four of you are added already. Okay.
+
+Okay. And so yeah. Send me a screenshot so that I can work Because I'm in Teams, but again, we can do it through SharePoint also. If there is a challenge let me do this while I'm here. I can do one more.
+
+Yogesh, are you getting the error? Can't try into that team? That is what I am getting. Don't worry. It is, card access.
+
+Actually, I had set up the account authenticator app, etcetera. So No. No. Don't do anything. Don't do anything.
+
+I think I will be able to solve it right now. Just bear with me for one more second here. Not an expert on SharePoint, but common sense should help me out here. Yeah. Okay.
+
+I think now it is going to work. Okay. Before I go and add others, let me see. Now try it. Click on the same hyperlink that I've ordered on, the chat.
+
+Okay. Sure. Yeah. It should work now. I'm pretty confident.
+
+Still, it is in that same way. But, yeah, let me do one thing. Did you get, this one? Email when I added it? Check your inbox for me, please.
+
+And from there, go to the link. Still, it will show you my screen. Sometimes it might take some time for it to sync also. Right? Give it some time.
+
+I think, I am doing it correctly. But if still there is a problem, I think it should not be. It takes some time to sync up, the policy. Just give it some time. Try it after one hour.
+
+But if you still have a problem, let me know. Because, yeah, looks like this is the same I mean, usually, we also do that these steps, same steps to give access to other team members. I I'll I'll wait for some time, and I'll then actually. Okay. Once it should get solved, in my opinion.
+
+If not, if you still have error after a couple of hours or so, just, send me the screenshot, then I will take it up from there. Okay. Sure. So from our Cal first things, we should be able to message you or we get it if we Yeah. Yeah.
+
+Yeah. Yeah. It will all work. I think you okay. We may need to get that set up.
+
+Right? Just add in there for us. Yeah. Yeah. I have already set up this charts.
+
+Yeah. Just okay. Just Okay. So let's continue. Oh, you're trying something.
+
+Go ahead. Yeah. I'm just seeing I'm trying to send you one ping. Yeah. Yeah.
+
+Yeah. Sure. No problem. Yeah. I just pinged you to get my It says failed to send.
+
+Yeah. Security will not allow. Do one thing. Do one thing. Click on that Oracle lease accounting folder.
+
+Here, post something. Start a post, and then ping me here. Yeah. Just post it. Here.
+
+Now I No. Just resending. It'll sending. Okay. We'll work on this.
+
+This is Sure. This is the the world we live in. Security has become overly complicated. Okay. We'll get that ironed out.
+
+In the meantime, we will see how we can make progress. If not, then we need to see other something security my security team needs to do something different. It is secured. It is a private channel, but I added you guys are numbers. This is what I had done in the past when I worked with external people.
+
+Let me check one more. Add numbers. This channel. Yeah, all you guys are here, actually. See this one?
+
+If you're online, I'm able to see it also. Utica is not on Teams. Okay. We'll work through this. If there are issues, we will the guest role guest role should be able to access.
+
+Settings. If you are a member, you can do all of this. Shouldn't be a problem. If issues yeah. It shows you guys have guest.
+
+Yeah. What I am getting is, we couldn't authenticate you. This could be due to device or a network problem or this could be experiencing a technical issue. So what you just ping me openly, I could get the notification. But when I go into Teams, that message is not coming.
+
+Okay. Let me let me let me I think yeah. Yeah. Correct. Correct.
+
+Something. I mean Pastors, chat chat is nice to have, but for me, at least, files and folder access is important. So let's see if we are able to do something about it. Okay. Let's keep going.
+
+So that is what I'll be able to resolve. Existing document templates, process flow, use Visio, no issues. Configuration document, can you send me your sample, of configuration? Then I will review the template because I don't want it like I said, I don't want to overcomplicate and if you guys have a template, if we are happy with the template, we'll tell you some template. Right?
+
+So I wanted to keep it very simple. Solution design document, again, same thing. Send me a sample. I will review it. If it is okay, I'll approve it, then we can use it.
+
+Is that okay? Yes. Sure. Okay. Project overview, all of you were there in the kickoff.
+
+Do you guys have any questions on that? In terms of context, both This is clear. Yeah. Timeline, everything is clear. Governance, everybody was there.
+
+You saw the team members, a representation from South, the corporate office. You'll have a combination of everything. And then meetings and cadence, I'm scheduling these meetings. I need to do, weekly meeting with the little bit leads and then one steer co meeting every month. K.
+
+That leave it with me. I will schedule it. Rate log management will be in an Excel template. If you guys have a template, send it to me. As long as I'm happy with the template, we'll put it online.
+
+We'll use it. And the weekly WSR meeting again, do you have a specified template or we can you you you send send me the template. Only thing is Steerco, it'll be standard. Steerco, I will prepare. Okay.
+
+Because Steerco problem is, why I will be preparing it is sometimes it gets distributed. Same Steerco presentation has sent us an FYI to higher up in the management. They wanted template standards to be common across Interfort. They don't want to be seeing vendor templates. K?
+
+Got it. So send me your RAID log. Send me configuration sample, solution design sample. I will review it. If I'm okay with it, I'll approve it.
+
+Hopefully, it should be fine. So I don't want to overdo anything. Sounds good, Opeli. Yeah. Any other questions?
+
+Did we achieve all the objectives for this meeting? Yes. Yes. I think once that access issue is figured and we are able to access document, I think we are good. That will get sorted out eventually.
+
+So Probably after a couple of hours, because yesterday, when my, I worked with my security team, and what they did on my firewall is they told domain calpus.com, allow it. So they cleared the domain itself. So anything that is coming from calpus.com domain, you should be able to come inside my network, whether it is cloud or our own data center, you should be able to access it. Yesterday, when they told that they have done it, I tried to add you, it didn't work. So today morning, after twenty four hours, I tried it, it worked.
+
+Okay. So probably, it is getting cascaded, policies are getting flushed out, old policies, new one is getting implemented. So that is the reason. So give it some time. If it doesn't work till tomorrow, your time Yogesh, same time, twenty four hours, send me the screenshot what you see.
+
+Then I'll work with the security team. Sure. K. I'll upload this recording whenever I have time today. If there are any questions, keep it coming.
+
+Sure. Awesome. Thanks, Tim. Bye. This was very helpful.
+
+Yes, please. Any questions?

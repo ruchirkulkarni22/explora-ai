@@ -1,0 +1,592 @@
+
+Got over, so somebody was calling me. So Hi, Billy. Hey. Good morning. Hi, Billy.
+
+Hi. So I think we can start. I've I started the recording already. Yeah. So, Salish, I think, are you gonna start us off?
+
+Yeah. So today, we just wanted to understand the current process. So how does it work today, the whole I mean, using a frame model, how it works today. If we can take one or two examples, maybe some different variants and, go through the process along with the accounting. Yeah.
+
+I think it would be good for us to start from the operation first because that's where the initial lease rec would come through. So I'm not sure who Sam or Shannon or would you guys be able to speak to that first? Because it comes through to your your division first. Right? The mills.
+
+And then we get notified in the corporate finance group and Juanita's group as well. So Yeah. Do you want us just to talk to speak to it? Is that what you want us to do? Mhmm.
+
+Mhmm. Yeah. Just walk us through what it the process right now you're you're going through. And then when does it come through into, you know, how you fill out the form or letting Juanita know, hey, I need to have this lease and ROU created in Oracle, and then we can go from there. Okay.
+
+As soon as the mill gets a new lift or we get notified that they're getting a new lift or replacement lift, our we have a fleet manager. He'll send us the contract signed. So once we get that, it'll have all of the information, the lease payment, the terms, all of that. We have a worksheet that we fill out, Excel worksheet that has all of that, and we do we do an Excel worksheet calculation too, just to verify, it has the current month's exchange rate or interest rate. So Juanita, when she enters that, she has a comparison and and they're gonna be off because of rounding, but it gives her just something to balance to.
+
+And Juanita, speak up if I'm saying that incorrectly. Alright. Okay. And we get sign off from the mail manager, the accountants, and I sign off on it, and we send it to Juanita, and she sets that up as an ROU in Oracle. Mhmm.
+
+And is that the same on this, on in Canada side, like the interior? The difference in BC is that the divisional accountants would set that up. So they would get the lease agreement from, same thing, our fleet manager, Steve Malczewski. He's gonna send us the lease agreement. The divisional accountants will take that and fill out the form essentially, the for the centralized team.
+
+So fill out the new ROU lease form. But, yeah, they're the ones managing that piece. It's not, like, centralized. Mhmm. So on the South, as I think it's it's also in the East that you guys fill out a a form, an Excel spreadsheet.
+
+Right? Yes. Correct. And you're not using the one that we have on ServiceNow. Yeah.
+
+So, Sam, on your side, what is it that you use? You you do use the online one. Right? Yep. We do.
+
+Yeah. Yeah. And then we also have our own Excel tracking file that we've set up our lease tracking file. So we put in all the information that we need. Then we even have those columns, Vicky, you've seen them of every month that we've paid.
+
+So we just kinda have it all, like, compiled somewhere on one Mhmm. Place for all of our leases. Yeah. And we don't use the form because there's no way for it to have a secondary approval through ServiceNow. We've asked if we could do that, but, we don't feel comfortable just letting the accountants do it.
+
+We we have a lot of errors, so we wanted the controllers wanted to review it and ServiceNow doesn't give the option for us to have a secondary reviewer on it. Right. So can we take a look at this form? So, like, what fields are there and, I mean, what do you get in order to, let us say, create a lease? What is the information that would be there in these, forms?
+
+So, yeah, maybe we can share the Excel spreadsheet one because I haven't seen it, or I have seen it in passing, but I I don't yeah. I don't have a copy of it. But on the, ServiceNow, I can show you once Shannon shares the Excel spreadsheet. I just wanna kinda keep this is the, you know, the I I think the East does that too. Right, Juanita?
+
+Are you guys following the same process? One Shannon open. Okay. If you want I was fixing it. I just sent her a couple, so I was fixing to pull that one up.
+
+And, Vicky, I think just to take a step back, when you say East, like, what do you refer to? Is it, like, Eastern Part Of Canada, or what exactly do you okay. Yeah. Sorry. Just to backtrack, the East actually uses a ServiceNow tickets for the leases.
+
+Okay. Because they were trained to use Excel spreadsheet, but they're not anymore, I guess. No. Yeah. They're sending yeah.
+
+They send snow tickets. We just got some for the East and yeah. Okay. Just wanted to go back track and just Yes. Perfect.
+
+That's why I want you guys to, like, be part of this because things have changed since, you know, it evolves, which is fine. Okay. This is the form that we use. You wanna speak to it, Juan, and you can. Yes.
+
+Basically, what it gives me is all the pieces that I need to actually complete the, ROU setup, in the lease module. The addition, it gives me this commencement amount, This is the amount that should be, my liability amount once I go through the entire process. It gives me my model, the year. This is my serial number, and I'll just take that and copy and paste it into the actual fields in the Oracle lease module. And here's where they give me the time period of the twenty four months.
+
+They tell me the department it should be charged to and what meal location, the interest rates, and then this is our secondary, signatures here where the meal manager will sign off on it. But then Shannon and Kristen, the controllers, actually review these documents to make sure that they're accurate before they come to me. Okay. So this is a twenty four month lease. Right?
+
+Expected length is twenty four months. And, this interest rate, 6.84, is that kind of related to the PV at commencement? What exactly is this interest rate here? The interest rates are, actually distributed to us at the end at each month end by I think it was Mercy that send those to us that tells us interest rate. So it'll be like this interest rate would have been what she sent to us at the June, and we'll use that until we get the new interest rate for July.
+
+And then any setup in August will have the July interest rate. Okay. And this will determine the whole, period commencement that you have there, forty nine thousand six ninety nine? Yes. And what Shannon was referring to is this spreadsheet.
+
+This is a spreadsheet that they set up that has all of the fields populated, serial number, start date, interest rate, and it will actually calculate, the number that I should be tied back to when I set this up in Oracle. Okay. Okay. So this is how I can confirm that I have everything that I entered correctly. Or sometimes it may be that there's something incorrect on this spreadsheet, but then we communicate that so we're all on the same page when it's set up.
+
+So there are two ways this can be entered either directly in the spreadsheet or, in ServiceNow. And, there are different divisions doing either of these processes. Is that a fair statement? Yes. I think the South is we do it in the South because our division accountants don't do the reconciliation for our ROUs.
+
+The controllers do them. That's why we have the review process for us since we're doing the reconciliation. Okay. Another question. So depreciation method is straight line.
+
+So are there other methods also that you use? Or everywhere it is straight line. Okay. Just ROU is straight. Right?
+
+The other stuff Straight line. Yeah. If we're just talking about ROU, it is just straight line. Straight line. Mhmm.
+
+Yeah. ROU is straight line, and, yeah, by every month, it will amortize by a fixed amount. Right? Correct. And when I put it in the fixed asset module, I will actually enter it in with the life of two years, not twenty four months.
+
+Mhmm. Okay. But we, when we depreciate, it's by the number of days. Right? Because of the calculation Oh, okay.
+
+Like our fiscal calendar is, yeah, it's four four five four five four blah blah blah. So it's not exactly the same every month. Right. Okay. Okay.
+
+Got it. Okay. So now, with this information, now what do you do in Oracle, Vicky? Or who who would be entering this in Oracle? Well, this is Yeah.
+
+Who Juanita would be. Sorry. Do you mind if I just ask, is the mill manager signing the lease agreement as well then when he gets it? Like, is he signing it twice? Who's signing the lease agreement?
+
+Sometimes he signs it. Sometimes it's the fleet manager and the VP. It just depends. The fleet manager and the VP signed that? Yeah.
+
+It just depends. Like, sometimes sometimes they are signing it. Sometimes they're not. It's just a yeah. I was just wondering.
+
+I was like, is they sign are they signing, like, it twice? Like, this form They signed the lease agreement. This is basically like, they signed the lease agreement, but then they signed this saying it's actually on-site and in use. Like, we've gotten it. Because sometimes those lease agreements are in bulk of things.
+
+There are multiple lifts and they come at different times. So this is just saying, yeah. We have the lease. It's here. We're gonna be billed for it now.
+
+Yeah. Cool. Thank you. Shannon, do you ever get the a delay? Like, it could be in use and okay.
+
+So it's still common to have that, is it? Yes. Yeah. And if that's the case, we do, I think now we've we've started doing it where we can backdate the lease. But before, we just expense that first payment and just start it when we get it so that it doesn't cause any confusion.
+
+Mhmm. K. That is one of the biggest issues is getting the lease agreement Yeah. Later, like, months aft two months after, like We'll get an invoice, and it's like, oh, what is what what is this? And then the mail will be like, oh, yeah.
+
+We got that for a couple months. Yeah. And then we have to backtrack. And that's where AP comes into play. The the ladies that handle the leases, they are quick to say we got a invoice for this.
+
+So where is the lease? And they'll start shooting emails so that we know that we're missing something. Yeah. So I think that's a common issue, and I think another common issue is, well, I just came across this when I was reviewing something. We have the lease agreement.
+
+Great. Signed. Set up in the system. We get the first invoice and the amount doesn't match. Like, the payment amount is different, and they're like, you go back to the fleet manager and they're like, whoops.
+
+Sorry. We had it had it amended. Like, now it's different. Here's the new one. You're like, this has already been set up with the original lease.
+
+Now we need to go back and adjust it, and now it's causing all these, like, little tiny, like, differences for two months of, you know, lease payments that were different. So I think those are, like, the two major, like Yeah. Issues at this point in the process that we could come across. So what causes these differences, Samantha? Is it, like, does it change based on usage?
+
+Or why is why would there be a difference? No idea. Honestly, I just, like I don't know either. Okay. I wonder.
+
+Like, it was a truck, and we had the lease agreement. And then we finally got the invoice, and it was a different amount. I'm not sure. I just really don't know. Okay.
+
+Okay. It might be a good this Sorry. Go ahead. I mean, I'm saying reconciling that and, you know, getting a little deeper into what exactly causes these differences, that might be a good idea. I mean, if we can know, like, what are the differences?
+
+I mean, the vendor invoice when it comes, what is the difference, and is it, like, a trend? Or that is something that maybe worth looking at. I think just Yeah. When we find it, it's usually too late, which is the problem. Like, we would love to, you know, have everything on our desk, like, before it lands on-site and before we set it up, and that's just not the reality of what we deal with.
+
+Right. Okay. And lots of times it's a lower price. They'll negotiate a lower price. So do we don't wanna go back and be like, oh, yeah.
+
+We'll pay that higher price just to keep this leasing just to make our reconciliation look good. You know, we can't do that. Yeah. I was wondering if we should talk to those, like, whoever negotiated the leases. Like, it would be nice to know what is what is why are we not being communicated?
+
+Vicky, that's really we've we've tried. We've tried. Yeah. I would love that to try. I mean, I I will say that have the fleet manager is really good.
+
+He communicates. There's other small lifts that the mill negotiates, like smaller lifts, and those are the ones that usually for us change, and we don't know about them because someone in the maintenance department is negotiating this this month to month lease that we're gonna have for twenty four months. Yeah. You almost have a gap between the fleet manager who I mean, in their defense, they have a ton of leases that they have on their plate at any given time, and they're trying to manage it. Then you have the reality of, like, what's actually on-site and what has shown up, what's left.
+
+We transfer assets between divisions. Like, it's, it's just a lot of moving parts all the time. Mhmm. Mhmm. Okay.
+
+So next question here is, Vicky, during our, earlier discussions, we spoke about, the need to have a division and to be able to track leases by division. Now where can I find division here in this form? Oh, you can see that. You do location is the division. Oh, main location is the division.
+
+Okay. Then do you also transfer between one division to the other, and are there any accounting implications because of that? Yes. We do. We move leases.
+
+But if a a lease is, like, if it's not up on hours and another mill needs one and they're getting rid of one, we move them around all the time, and we have to do a transfer. It can it causes issues because the the clearing account balance doesn't transfer with when we transfer it, so we have to do another manual entry to move that clearing account balance. If there's an outstanding payment or overpayment, we have to manually move that to the new mill because the system doesn't do that. That's only when we pay. Right?
+
+When you say clearing balance. The clear if if we're if we've overpaid, like, we're ahead payments or behind payments and there's a balance in that clearing account, we have to manually move that amount because it it doesn't it doesn't pick it up when we transfer. It only picks up the liability part when we transfer. Right. Yeah.
+
+So when you say transfer, is it like do you do it in FA module? Like, transfer from one location to the other you use that, functionality, and that will have some accounting implications also. Yes. You transferred, and then you'll go in and you'll change your depreciation accounts. You'll change the description of the asset so that it has the new, divisions, three digit identifier on it on the name.
+
+And then you go into the lease module, and you'll change the description there as well. Okay. Okay. So next step. So now that you get this, all the signatures are done.
+
+Okay. Yo, Yogesh or Ritika, any questions before we go forward? So this is what they do in the South. Do you want to see what is being done the rest of the Yes. Yes.
+
+Okay. So in the South, it is essentially this form or this spreadsheet that gets, filled out. Both south and east. No. Apparently, east is does not do that anymore.
+
+Oh, okay. Yeah. That's what we discovered. Okay. Yep.
+
+Which is fine. Right? Alright. So I I don't know actually, Juanita, Pacific Northwest because you're managing their fixed assets as well. Right?
+
+Yes. And do they do the same thing as the south then with the Excel spreadsheet? No. They'll do the snow spreadsheet. Okay.
+
+So everyone else does this one. So this is, part of, the snow ticket. So these are the forms that we have in place for leases. So when it's there's a retirement or addition or lease transfer. Okay?
+
+So if we just look at addition since we're just talking about addition only, well, not only, but primarily. So we would have who has, requested it and chime in anyone who like if I'm speaking. If you need to add anything, please do because I'm out of the operation side. Right? So mine is just more have high level concept that could have changed.
+
+So really this form mimics exactly what information we need to create it in fixed assets. From the lease number, we need to put a lease number, description, what type of category is it, how many years, which sorry, which payable business units, asset book. So everything that you see here is basically what we are required to fill in on the in Oracle. I just don't wanna have to go through it all because you can see it. Mhmm.
+
+And then there's room to attach. So you can attach any type of documents to this. And what the divisional account or sorry, the central team will use this information to create it in, in Oracle and also attach any attachments that's here onto Oracle as well. Anything to add, Aman or Sam or Anit? I think one of the things to keep in mind that I think it's an Oracle limitation that we've noticed is for the least I think the least number, it's there's limited to, like, I think it's 15 or 16 characters.
+
+Yep. So we typically always try to use, like, the serial number, but in a lot of cases, the serial number can be a bit more than 15 or 16. So we use the last couple digits as that's more of a unique identifier. Mhmm. And, yeah, typically, what the divisions do is I think they have, like, their own sort of sign, mailed, managed contract that they typically attach to the form too.
+
+So it has, like, the sign offs on by typically, I guess, maybe one of the VPs or, like, the fleet manager as well on those as well. Yeah. That's all I was gonna add. You you would definitely attach the signed lease agreement to this form. Yeah.
+
+So you I saw there is a monthly payment or whatever is a periodic payment. What about other things? Like, what is the term of this lease? Okay. You have a lease start date.
+
+Do you also have a lease end date? Like, or it is just based on start date and number of, payments? Yep. So in Oracle, that's what you fill out. Right?
+
+You don't need to fill out the end date, at least in the fixed asset side. In the lease accounting, it's different. Right? Fixed asset also, you would have a life. Right?
+
+You have the life of an asset. So Yeah. Whether it is So mhmm. Yeah. I agree.
+
+So let's, this is in Oracle right now. So this is the lease, right? This is just setting up the lease. So everything that you see here, for example, are the information that we had filled out from that form. The ROU is on the other side, right?
+
+So if we go here, the setup is exactly the same as what we need to would do. It's just the matter of the form is just different. Right? Yep. And the end date is just based upon the number of periods and whatever your start date is.
+
+The system will automatically calculate your end date. It will come from the asset category, the end date, or the term of the asset, life of the asset. So that will default from the category. The lease end date, you'll set the lease is set up before the fixed asset. So what you'll do is you'll go into the system and create the lease.
+
+And if she goes back over to where it says recurring payments, it'll tell you what the lease end date is. Scroll yeah. End date is 04/1427. That's based upon what you enter as your start date given the fact that you'll have twenty four periods. Okay.
+
+Okay. Got it. Can you go back to that sheet, Vicky? The Mhmm. The service in one.
+
+Yeah. So here we have initial direct cost. So these are, like, are there also some deposits that you track separately apart from the direct cost? Deposit is something that you will have to recover later. I don't think we do have any deposit, at least as far as I know.
+
+And I'm seeing head shaking. So We we've not had any, deposits. I mean, the only extra payment we would have would be freight. But that's we we don't have a lot of that either. No.
+
+But we don't have any, initial direct cost. We have those, like, small ones, don't we? Like, the tire levy and, like, the tiny little ones. I think we enter those in here. Like Yeah.
+
+They're pretty insignificant in a lot of cases. It's, like, 75 to a $100. So Yeah. Yeah. I have seen a deposit on some Toyota leases, but those didn't get pushed through.
+
+It was like, if you pay a deposit, you'll get a lower interest rate or something like that, but we didn't go through that deal anyway. So that's different than paying, like, Jacobson Ford for the first payment. That's what you're saying. Right? Yeah.
+
+Like, the advanced lease payment? Yeah. We would put it in that, yeah, top section. That direct cost, yeah, like like Armand said, it would be that tiny little amount. So that's different than a deposit then?
+
+I yes. Okay. So now you have ROU depreciation. Yes or no? So will it be no also, like or always it will be it will go as part of the ROU?
+
+Most like it's defaulted to yes, but there are times when, you know, they they know it's coming. They want to set it up initially just to hold on, like, to put it in the system. Once they are notified that, hey, it's being depreciated, then we would say yes. Right? Because with straight line, you have the opportunity to say yes or no.
+
+With Oracle, when it's a UOP, like a unit of production, you don't have a chance. There is no such thing to stop the depreciation. Correct. Yeah. Yeah.
+
+And these initial direct cost by default, they will not be I mean, there there is no ROU that is involved there. So it is just a one time cost. So that is how it has been done. Right? Okay.
+
+I can send you this as well, Jailesh. Yeah. That one has to. Yeah. Okay.
+
+And maybe the other one that we saw. Right? So we can, simulate that in, the lease accounting. The one example that we saw earlier. Right?
+
+$2,200. And, Vicky, I have one that's completed. If you want me to send it to him that Walker sent over, that's a snow ticket. Okay. Yep.
+
+Yeah. Sounds completed for him. Alright. Thanks, Wendy. So these so these are all equipment leases.
+
+So do you also have property leases? Is it a similar form that you would fill for that? Yep. It would be the same form. We yeah.
+
+It's mobile equipment. It could be land, facilities. So we have two, four, five different categories. Okay. Okay.
+
+Mhmm. So now with this, how do you handle multi currency? I mean, if it is in a different currency, what do you do in such cases? Well, currently, we can't handle it in fixed asset. So what what we have to do is create our own Excel spreadsheet to track it Mhmm.
+
+In that right? In, in our Excel spreadsheet. The ROU, however, we could convert it at a rate that we know the the for, foreign exchange rate, create the fixed asset, and then have it amortized on a monthly basis. So there's like, yeah, your site, like using two systems to track the multi currency. Okay.
+
+So in this lease accounting, there is support for multi currency. Like, you can enter whatever currency you want. So that is one improvement that it's like. Yes. Okay.
+
+So now from a process standpoint, Vicky, once all this is filled up, it is approved and, you are good to go. So what you do is you come to assets and just, can can we see that for for the example that was shared earlier? So Oh, yeah. Sure. How do you create it?
+
+Yes. So, Juanita can speak to that since we're looking at that specific asset. Is that okay, Juanita? Juanita loves to show and tell. I love putting her on the spot, the poor lady.
+
+Not really. Hold on. So you want to see? In fixed assets. Yeah.
+
+In fixed assets. So for the same example we saw, maybe let's locate it in the application. Oh, the one I just showed you? Let me see which one that is. Is that the Thomaston one, the JCB?
+
+Mhmm. I'm going into Oracle now. You look super thrilled. Vicky, you know me. Let me know if you see my screen.
+
+Around. Yeah. I can see that. Okay. Sorry, Juanita.
+
+No problem. So we'll go into manage leases. Search. So this one we just looked at. And this is this is how it's set up.
+
+I will go in and copy in the lease number. Here, I would put in the 24 periods. Well, I have to select the category, select USBU, and then select the correct vendor that we're going to be paying. And they have sites set up for the leases, so I'll select the lease site. It's monthly, and our payments are in advance.
+
+Over here is why I will actually attach the document that they sent to me approving, the setup of the lease. Anything that they send me, the email with the approvals along as the actual lease document, I will attach that to it. So here is where that's the attachment that you just looked at. I'll make have to make sure that I check major lease term, and then I'll go to the one time payment section first. I'll enter in that it's an advanced payment because that's how it's set up.
+
+The payment date will start with this month, 07/15, and the amount of the payment, which is on the agreement as well as the addition form two thousand two zero nine. And then I'll go over to recurring payments and put in that it's this will default automatically saying that it's a period lease payment. It'll now have the next payment will be due on 08/15 because we're saying the initial advance payment was 07/15. So the the next one is in the next month. The interest date is the fourteenth.
+
+I'll enter in the amount of the lease. It'll actually calculate that there's 23 periods left because we have one. It's 24 periods minus the one advance gives me 23. The interest rate comes from an email from corporate telling us what our current interest rate is, and then the system will automatically set up what the end date is based upon the number of periods. Once that is set up, I would just there would be a button that says save and close.
+
+And then where it would go, it would then go over into this pending section. In the pending transactions, it'll actually be the same information that as you saw under leases. This is where I'll go in, and then I'll look in and confirm that I've entered everything incorrectly, that the interest rates and everything is right, and then I'll tell it to please generate the schedule. It'll then generate a schedule, and that that Shannon had mentioned by them sending me what the rate should be in that spreadsheet where they calculate it. I'll make sure that what the schedule shows, it it balances to this.
+
+We may be off, like typically, it's 2 to 3¢. We're off just rounding. But as long as I'm not more than, a quarter or so, I'm glad you Pilly's not on here, making sure that we balance. I don't ask any questions. It'll typically be, like, 2 to 3¢ off.
+
+Once all of that is done and I've confirmed everything is correct, in this pending section, there will be a button in the top corner that says submit. Once I submit it, it's no it's out of the leases. It then becomes, an item an incomplete item here on the asset module screen. That's when I would then go into what's created, and it will let me enter in, the year depreciation life, which for this will be two years. And then I'll enter in the, charge accounts, expense accounts for, the depreciation, the department, and the company code, and I'll put in the location at the meal level.
+
+And then from there, I will actually have, a fixed asset. What I'll do is I'll go back here, and let's look at this again. And now I'll take it to the fixed asset side. This is my fixed asset number that's assigned. The description is set up with always with the three digit location ID at the beginning of the description.
+
+And in the asset module, this is what will be set up. The assignment, this is where I was saying I'll add this in. I'll have to add in that it's UTT. The system automatically defaults to the 870900, and I'll have to add the department and then put in the location information. And once I complete all that, I'll just, tell it to post it, and it becomes a fixed asset, and it'll assign it the next sequence asset number that's available.
+
+Okay. Couple of questions, Juanita. One, if there are any, one time direct costs, where do you put that? If you had a one time direct cost, that would go back, here. It would be in the actual, lease module side.
+
+Do you want me to I can, actually I think I have access here. I'll take into a day of that way I can show you because you can't see it on our actual already set up lease. You have to see what the screen looks like when you're actually trying to set it up. And I don't wanna do touch anything in live because I'll hold something up, and then Armand will be upset. And you're being recorded.
+
+Thank you. So here, if I were to go under the lease module, I'll show you just what it looks like from scratch if you were setting this up. Maybe this will help more. This is where you're entering all of your information, like your lease number, your description, the category, the company. And here where you were talking about, if it's a one time payment, you can scroll down, do a plus, and hear your, available options for onetime payment, advanced lease payment, an an an initial indirect cost, a purchase price, residual value, termination penalty.
+
+Typically, we don't use any of those except an advance payment, and every now and then, we'll have an initial direct cost related to freight. So advanced lease payments are generally included in the liability and ROU calculations. Right? And then, if it is a twenty four month lease, you make an advance payment, and then in the lease, you put it as twenty three months. That is the remaining number of payments.
+
+Yes. The system will actually we don't have to enter the twenty three. It'll automatically default based upon you putting twenty four. It'll say minus one advance gives you twenty three. Okay.
+
+Got it. Got it. Any other questions, Yogesh or Ritika? Anything else? No.
+
+Nothing at this moment, Shailesh. Okay. So, we cure, Juanita. Can we go through the for this particular example, can we go through the accounting entries that will get generated? We don't need to go to the values, but just the accounts.
+
+Yep. Actually, we can just go okay. Sorry. I'm just gonna pull it up. Or we can just use this even.
+
+What was the asset number, Juanita? Could you just pull it up? Like, the the lease and then we can just show the accounting on it. Okay. It's this one.
+
+Is this where you want to go? Mhmm. Exactly. Go to transactions, please. Mhmm.
+
+So in the, I think it's the additions. Yeah. When you hover or is there transfer in? I forget which line is which. Yeah.
+
+There you go. So can we We can. Yeah. Mhmm. Perfect.
+
+Thank you. So this is our accounting. They would just debit the asset and credit the liability based on what has been calculated. So when you say asset, it is ROU account. Right?
+
+Yep. Correct. So ROU account to lease liability credit, and the UTT is nothing but the, division. Correct. Yep.
+
+Okay. So this is the initial, entry that gets created. Mhmm. And now when you do your depreciation, your ROU will, decrease periodically. It means, 49,000, it will become ROU will become zero at the end of it all.
+
+Exactly. Yep. Okay. And now the interest part, 6.14% that we saw. Mhmm.
+
+So how does the accounting work for that? Yeah. So, Wanita, do you mind just clicking on done and navigate to lease tab, please? And before that, we can where can I see this schedule? Do do you have a the lease Yeah.
+
+There is here too. You can see it here, the amortization schedule. Sorry. That's okay. So it's gonna pop up.
+
+This is the schedule. Okay. $2.02 $0.09 is your monthly payment, and, the liability would reduce every month. Yeah. It would become zero at the end of it.
+
+Same with asset. Asset will get amortized and liability. Yeah. So now the interest part of it. Yep.
+
+So the interest Yeah. Yeah. That column is there as well. Yeah. Okay.
+
+So interest will get debited every month, and that will go out from the lease liability. Correct. Yeah. Okay. Okay.
+
+And, all this, will go directly from FA to GL except the, is there a there there is an integration to AP as well from here. Right? It doesn't create an automatic yeah. So two two zero nine, it will create an automatic, AP invoice. Yes.
+
+So Juanita would have to run to click on generate invoices, which you won't do here. But if you can see, yeah. Not yet. Not just not yet. Yes.
+
+So we would click on generate invoices, and you have the opportunity of saying all of it or specific ones. But because we have so many, we would just run it all at once. And then that's when it sits there until AP pulls it in. So there's also a process where AP has to import invoices from fixed assets. And if they need it immediately, what I typically do, Vicki, is I'll go into AP and I'll import them so they can get started rather than waiting for it to run overnight.
+
+Okay. So now this lease clearing account, Vicky, can you tell us where that will come into play here? We spoke about it earlier. You had some issues. Yeah.
+
+So let me pull up. I'm just grabbing an Excel spreadsheet to show. Yeah. Second. Can you guys see my screen now?
+
+Yes. Okay. So this is the journal entry for lease. Can you guys see alright? Can I just expand it?
+
+Yeah. So ROU two liability that is a one time entry, depreciation expense to accumulated. Okay. And that will change every month. Right?
+
+Based on the calendar, based on the number of days. Mhmm. Mhmm. And so when the central team clicks on the button in Oracle, this button here, I'm also in a test environment. Because we need it's gonna remind me since I tease her all the time.
+
+Let me go back. So when, the central team clicks on calculate lease expense on a monthly basis. That's the entry that we're looking at here. Right here. So what it does, it'll calculate and expense the interest, but also, bring down our liability.
+
+Mhmm. Alright. And then what happens is that it also creates this prepayment. Not I shouldn't say prepayment. These clearing accounts, right?
+
+So you have lease liability that is a debit. And then you have the clearing account that is a credit. So that button creates this entry. So the point of that is then when it goes into AP, when we generate the invoices, it goes into AP. AP will select that invoice, which will debit the clearing account and then credit the, AP control account.
+
+Okay. So the first one okay. So, the first part that you said, lease liability debit to lease clearing, that will directly go to GL. Oh, sorry. Come by me again.
+
+Which one? Lease liability debit to lease clearing credit, thousand dollars. This one? Yeah. That will go directly to GL.
+
+Right? From Yes. That will go to GL directly. Whereas the second one will go through AP? Correct.
+
+Yes. And a thousand dollars is your monthly, payment in this case? Your Yes. Friend dollar? In this instance, it is.
+
+Yes. So what is This is just an example. It's not real. Got it. Got it.
+
+Yeah. Okay. Yes. So your, lease clearing will always be zero in this example. So what exactly is the issue when it comes to lease clearing?
+
+So the issue is that in fixed assets and in AP, there is no tagging of which lease are we referring to when we post this. Right? K. Let me let me put this in a in a different way. When we generate the invoices, there are, assigned invoice number.
+
+Mhmm. Okay? By Oracle because it needs to have something to be there. So if we go back to oh, I should have just went in there. That's correct.
+
+Their system generated monthly. Mhmm. So when, Anita sorry. When, the central team clicks on this generate invoices, on here, we should see actually, this is a test environment. I don't know.
+
+We don't have that maybe. Okay. Let me go back to here. This is in production. So you can see here, there's already an invoice sitting there that has been generated.
+
+Mhmm. Let me see something else. So you're what you're trying to say is that when the invoice gets generated, you are not able to link it to the lease. You don't know which lease it is. Exactly.
+
+Yep. Exactly. And that's why we actually have these DFF fields Mhmm. To link it. So as you can see here, these are all of the invoices that are generated within Oracle.
+
+When we click on generate, they have to assign an invoice number, and it just sits in AP. Mhmm. Because the invoice number that's generated does not actually match with the vendor invoice. Right? So we would oh, actually, Misty might be the best person to talk about this.
+
+I shouldn't just like. Missy, maybe you can you can go ahead and explain the process and maybe it's better for you to speak to it. My understanding is so the reason when a lease invoice is generated in Oracle monthly is that it's assigned an invoice number to prevent duplication, but it's always found by the, the serial number that's listed to the asset. So it's generated by that, and then this random digit is assigned at the end of it so that you can find it. But in the event that you didn't reconcile the previous month, it won't it won't oh, we lost, is it just me?
+
+Oh, she's she's frozen. Mhmm. I because I made her talk. Sorry. There she is.
+
+Sorry. Oh, she's bad. Sorry, Misty. If you just went by the serial number each month, then it would fail because if you didn't reconcile the previous month, it would be tagged as a duplicate and it wouldn't import. Misty, I think we lost you in between.
+
+Do you mind repeating? Yeah. So each month that, asset invoice is generated, it's, first assigned by the serial number tag to the asset, and then there's a dash and then a whole bunch of random digits after that. And the reason is is because my understanding is is if you didn't reconcile or clear the previous month, then then you it would be flagged as a duplicate from Oracle and it wouldn't import properly. It wouldn't generate.
+
+But there is the only data that, is is in is provided by the invoice importation is the, asset dollar amount and the coding and the vendor. Sorry. And the vendor. Everything else has to be manually entered by the APT. Missy, do you mind giving me a a a supplier name?
+
+Maybe I can show it on the screen. Ford Credit. Ford? Ford Credit. Yep.
+
+Oh, okay. It might be Ford Credit Canada, but Yep. Yeah. Yep. Thank you.
+
+And then if you want to yeah. You can search and you they will come up with a Oracle asset, invoice group. Any day now. I should have narrowed it down, but there it is. So you can if you expand your source section, you can see manual invoice and then Oracle assets.
+
+Mhmm. Yeah. I just can't, this one here. Right? So this is the manual, this is Oracle.
+
+So these are old. Mhmm. If if yeah. If you filter it on creation date descending or yeah. Invoice date would be fine too.
+
+Then you'll see that Oh, there it is. So there's on the main ones here that we've entered. Yeah. Those are the ones that we have that the system has generated that we have not capitalized on. Okay.
+
+So can you open any of the ones that have come from assets? Yeah. Just click on that. Yep. So here you're saying you don't have a you you spoke about a DFF also in this.
+
+Right? Yes. But it's not populated here in the in the fixed asset generated one. Mhmm. Show you.
+
+So this invoice that is created from fixed asset basically just has the standard information. It does do the coding. Oops. Sorry. Yep.
+
+And the dollar amount. Yeah. But that's it. Mhmm. So you don't know which lease it has come from?
+
+No. Oh, yes. Because the, asset is the invoice number. Yeah. So that's the Yeah.
+
+That's the lease asset tag that is entered. And so we would have to correct the invoice number to what actually is the invoice number and then take that lease asset tag and put it in the lease detail screen. Mhmm. So what Misty is saying that he she has to change this number, right, to match back to the vendor. But also our workaround to make sure that we know at least which one it is, is to actually have the additional information populated.
+
+So in the header, we would click on lease details, and then it would say, okay, which in, lease number are you applying it to, as well as which period is this relating to? Yes. With that, the downside of this is the fact that because it's at the header level, sometimes we would have multiple lines, right, Missy, from vendors. Like, multi sorry. One invoice with multiple lines relating to different leases.
+
+Correct. Yeah. So we would have to split it up. We can't, we can't, post a consolidated invoice. We have to enter them manually one by one because we have to tag the lease asset details.
+
+So yes. Okay. So supply in okay. So what you do is, so the invoice that is sent by supplier, that information is used to, make changes to the one that gets automatically created. And what if there are any differences between, like, in case of usage based, if there are some variations, what do you do?
+
+Do you enter a separate line for that? We've, unfortunately, you're not able to on the lease asset invoices. You're not able to revise or change the cost at all. If there's any additional cost, we've advised the vendors to bill them separately. But for example, if there's, like, a late fee or something or a late charge, we have to post it as a separate invoice because, anything that's been added to this voucher, gets put and, assigned to the, asset.
+
+It doesn't matter if the coding is different. It gets picked up in the asset, and it shows up as a discrepancy. So now one more question. When the supplier invoice comes and you said that one supplier invoice can have multiple leases. So Yes.
+
+How would you differentiate? I mean, how would you know that, okay, this invoice is for lease number a b c? Because we go by the asset tag. And we also have spreadsheets. We have spreadsheets to keep track of the asset amount, the asset, asset number, and the and we keep track of the month that we've posted the lease in.
+
+So we have put a don't you have to put an a, b, c? No. Yes. We do. Yeah.
+
+That's like that. Yep. So we have, one supplier that, has it did have six, but now it only has four leases on the one invoice. And so we have to use the invoice number 1234 and then A and then 1234B. And each of each of the invoices has a different lease tag assigned to it.
+
+Yeah. So basically, Misty has to just use one of them, but create the the remaining that's on the invoice. Right? Yes. And I think your invoice does show which, the least number.
+
+Correct. Right? Yeah. Yes. So that's how she knows.
+
+Yeah. Not able to visualize fully, but when I'm asking more yeah. Yeah. Ultimately, you're having to enter the same invoice four different times just strictly because you have a different Listening. Number Mhmm.
+
+That you have to tag Yeah. And process separately for the asset module to reconcile properly. And I feel like the crux of it is that header level, like you said, Vicky. Like, you have to put in that additional information. Yeah.
+
+You have to put in the lease number and the lease month or else when you run your lease reconciliation report at month end without those details captured, you will never reconcile and you will spend, like, hours trying to figure out what happened. So at the header level is, like, the the key of it all. What's the least number? What's the month? That's the only way it'll pull through into that lease rec report and balance.
+
+But something that AP appreciates is that it's not a locked sell. So we can change those lease asset tags at any point. And it's really nice to have. If we find it three months later, absolutely, we can be hey. Sorry.
+
+This was missed or that month is wrong or whatever. Can you go back and change it? And we absolutely can do that. So that does make things easier. But finding it sometimes can be difficult.
+
+But Yeah. And that's when we created a report that picks up all of the AP transactions Yeah. To show those, information like those additional fields so that when whoever is reconciling, they can use that report to say, oh, okay. This one is actually missing all of this information. That's why my rec is out because it's not there.
+
+Yeah. That report has been the only way to find it, Vicky. Yeah. That report is so helpful. Because Or for example, if we accidentally post the late fees on the invoice instead of as a secondary invoice, those will show up as discrepancies too.
+
+But we can't change that after the fact. The report is created because everyone has different roles and their access cannot open up what I have done, like, where access cannot open up what I have done, like, where I have clicked on additional information, gotten in there. Not everyone has that access just because of the control policies. So that's why we created that supplementary report to help, our reconciliation. I think going back, I'm not able to visualize the whole process, Vicky.
+
+Let us say there are four leases. Okay? So there are four leases, and you have four invoices that have come from these four leases. And tomorrow, supplier is sending you a consolidated invoice for these four leases. It is a valid scenario that can happen.
+
+Right? The supplier can send one invoice belonging to these four leases. Now what you are saying is that you go and make changes to each of these individual leases. Right? Yes.
+
+If there are any that is how you tie back. You enter the DFF, and that is how you are able to do it. But my question is, how do you know that, you know, the invoice that the supplier has sent? It is for lease one, two, three, four. How would you know that?
+
+Is there something in the supplier invoice that will give those details? Yeah. It's on the invoice itself. They'll have the do you have an example? Yeah.
+
+I can share. I'll just stop sharing. It'll have the lease number or the lease this serial number on it on the invoice, which matches the lease number in Oracle. The you are talking about the invoice that comes from the supplier? Yes.
+
+Okay. No. That's fine. God. We cleaned all our leases up.
+
+Who's the other one? Well, tomorrow, we'll also be implementing ideas. So I'm thinking from that standpoint also. Right? Like, how do you train ideas to yeah.
+
+Yeah. So this one has three leases on it. There's this lease, this lease, and this lease. So our spreadsheet has a layout of the lease number, the coding, the pretax amount, the invoice amount, and then we have to tag it to invoice a, b, and c. So if I go here, So what you would do is for that particular supplier, you will search the invoices that have come from fixed asset and make changes to that based on whatever you will show me now.
+
+Okay. So, so here, we have to enter a, b, and c for those dollar amounts. Yeah. Because we can't use the same invoice number. Right?
+
+Correct. So that's why they put a, b, and c at the end of it. Yeah. So this is what our spreadsheet tells us on how to code it and who to send it to. So if I were to search by this So is this a custom report or is it the vendor invoice that you showed no?
+
+That's the vendor invoice. Here are the Oracle generated invoices that we've not used. So this is the asset. So here's the one asset release. Mhmm.
+
+So we can search by that. And you can see that here's the designated invoice number that it's assigned, which is again why a new fake invoice number is generated each month by Oracle. Because if you don't reconcile the previous month, it can't it can't use the same number. So it can't just use the lease number for you to find it, and then it's assigned to invoice group. When in '22 when, we started using the Oracle asset, import imported invoices.
+
+When we were taught how to do that, we were shown a, a saved search to help find them. But, unfortunately, as you can see, by the time that they're generated in the month, we can't use them because the payment already needs to have been made. So so we stopped and I don't know about The US. I can't speak on their behalf, but I know in Canada, we don't usually. And we do.
+
+Yeah. So every single invoice, every single lease that had that's in BC, I know for sure, the lease import invoice is still here. So what you do is for that vendor and for that particular period, like, whatever is the invoice created in June period in this example. Yes. So you would go inside that invoice, look at the supplier sent copy, and start making adjustments there.
+
+Yes. But, what we determined was and I I can't I don't have the access that Vicky has, so I can't open this for you. But what we determined was the amount of modifications that we needed to make to this import invoice, was more time consuming than entering this invoice manually. So what is it that you need to adjust, Misty? The only thing that you don't have to adjust on this leaf import is the vendor name, the dollar amount, and the coding and the taxes.
+
+Right? So you still you have to change the invoice group, the invoice amount. You have to change the invoice date, the payment terms. You have to, add the attachment and put in the requester, then you have to go to the additional information and add the lease details. So there's only three fields we're not touching.
+
+But I would assume okay. I'm thinking too fast. I have too too far. It's probably still be the same, wouldn't it be, Shailesh, like, when we go into the lease accounting? Actually, I am thinking of a different process, okay, in lease accounting because I'm the way I'm thinking is supplier is sending an invoice via IDR.
+
+We will create that invoice in full. So you will have two invoices. So one that is auto created by lease and one that is, one that comes from the supplier. So let us create both these invoices. One of it, we will pay, and the other one, we will dummy pay and tweak the accounting accordingly.
+
+So Well That is what that is the approach I'm thinking. Okay. And we did have the prepayment leases as well, again, when all of this rolled out. And that was in the event that you needed to enter an invoice in June for a payment in August. But, again, because the August rental period is not open, we actually can't enter that invoice.
+
+And let's say that the payment is due August 1 because they give you forty five days to pay it in advance, but you don't generate August invoices until the twentieth. So we're we're always three weeks late then Mhmm. Instead of forty five days early. So, the invoice amount here is $10006.84.8. What is there in the other?
+
+Yeah. That's the amount of the lease payment, not the invoice amount. Okay. And for that particular lease so this invoice is a consolidated invoice. So for this particular lease ending with, eight x, what is the amount here?
+
+$10.06 $84.80, which is correct. Okay. And can there be differences there as well? No. I think the only time when it's different is if there's no communication between whoever has renegotiate the contract and and came up with a new price and didn't tell us.
+
+Because this amount that Misty is showing in the UI and Oracle comes from the lease lease module. Right? Or the Yes. Yeah. So if we haven't updated that, it's not gonna reflect correctly anyway.
+
+So there's, like, again, there's communication issue that we have. We actually had one, in March 1, the lease change in Adams Lake, the dollar amount. So based on usage, can this amount change? Let me put it that way. Like, if you use it, no.
+
+It won't. It will always be the amount. This there is there would be no mismatch in the amount per se. Correct. So if you have over usage hours, the vendor's been advised to post them on a different invoice?
+
+Not for the $3. Oh, yeah. It's mandated up here. They can't they can't include that dollar amount on a lease invoice because the lease invoice history, when you check invoicing, you want to see that you always have this invoice for this dollar amount consecutively. Okay.
+
+So that anyway, you said if there are any incremental, these things, that will be a separate invoice. That will be outside this whole process. Only not for the not for The US. Ours is all in one invoice. Oh, in US, it is all in one invoice.
+
+For the South, I'll say. I'm not gonna speak for PNW, but yeah. Yes. Okay. So, Shannon, can you show me one invoice where there is a difference?
+
+But is that But I just want to consider all the scenarios. Right? So Is that, like, lack of direction to the vendor then? Is that because you're allowing them to? No.
+
+I I'm not I don't I'm not allowing them. I don't know. That's just the the way it was set up, Juanita. You may know. Yeah.
+
+It's not allowing or disallowing. That's just the way it's been set up on the invoice. Yeah. But it's not a matter of fact. Some of them will change it, and some of them will not.
+
+So when our my understanding is is when our when our leases are set up with that company, they're advised any additional charges are to be billed in separately when they get the lease. I'm not aware of that, but they all come on one invoice. So I don't know what our lease managers are doing, but it's on one invoice. I mean, if it is, if the amounts are going to be the same, you can still reconcile because it is going to be one constant amount. But if the amounts are going to differ, then how would you tie back to the lease invoice?
+
+The lease amount will be charged to the lease account, and then the other is expensed on that transaction on the check request. Do you post them on the same, invoice voucher in Oracle? Mhmm. And when I run the reconciliation report, I will put a filter in there so it only gives me things that were charged to the $2.57 so that I only see the things charged to lease. I don't look at the expense side because that's expensed.
+
+I'm not really concerned with that. I just wanna know what's bounced into my clearing account. That would be helpful if we were able to do that, but we've been told that we can't I don't my report, and I and I filter. Right. Yep.
+
+For Simon, maybe once you're ready, let's look at one example where there is some differential and what do you do with it. Okay. I'm pulling up the lease now. Well, I don't have access to see the the invoice side. I can, share my screen, Juanita, and if you can pull it up because I don't have access to see that invoice part where they enter it.
+
+You're on mute, Anita. Oh, I was just saying I think I have that. Okay. Yeah. This is our Taylor Leasing.
+
+So the invoice is, the serial number up here, P50644. And you can see they bill us for total, the total hours, but it's got the minimum monthly charge here, which is the ROU, periodic payment amount. Okay. And what is the least amount here? I mean, where is the least number here?
+
+Up here, where it says serial number, up here at the top. Okay. And what I have done is I've taken the invoice that Shannon shows you, and I've gone into Oracle. I'll share my screen, and I've entered invoice number R118906. Because that's where they go in, and then they enter the, invoice number from the vendor.
+
+Mhmm. There's Taylor. And I don't know if there's an overage on this one. It didn't go into it. It didn't look like an overage.
+
+It just looked like it had your lease of 5,500. Mhmm. And That's the total that's the total amount. $37.50 of that is the periodic, and the other is the over the base payment. Okay.
+
+And here is the actual request that they will use to actually enter it. And this is where part of it's going to UPS 257005, the $37.50, and then the balance is being expensed to a rental or lease account for the 1,800 to come to the total. So when I run the reconciliation report, what I typically do is I'll dump it out as an Excel spreadsheet, and then I'll filter on it. So it only gives me the $2.57, which are the transactions that post to the clearing account so I can reconcile when I have differences. So that the 1,800 is a different line in the same invoice?
+
+Yes. Can we see that? At least in a p, in the UI, in Oracle. Yeah. In Oracle, it is.
+
+Yeah. Can we see the Oracle inverse, the the separate line there? If you hit lines Yeah. Yeah. Go to lines.
+
+Yep. There. And then if you needed to see coding, you can go into account admin. Okay. So that thousand 800 is entered manually.
+
+Go scroll back up, and then if you go into validated Uh-huh. And then accounted. So 257005 is the lease clearing account. Is that correct? Yes.
+
+Yeah. Yeah. And the one starting with 88188 is an expense account. That's an expense account. Yes.
+
+Okay. And this whole process is manual. So for all the vendors, you would be doing this. What are the differentials you would find it out from that report and, come and change those invoices. Is that correct?
+
+Is that how they Like, in this case, thousand 8 yeah. Not all of our leases are this way. Some of them do just are just a base payment and not overages. I'm not sure how their AP is tracking it. You may know, Juanita.
+
+I don't what what AP will do is they'll take the invoice that comes from the Oracle module that's pushed over. They'll find it based upon the serial number, and then they'll go into it and look at the amount that came across from the lease module. If there's a difference, typically, it's already been approved on the check request that I previously showed you, and then they'll go in and enter their lines to process the invoice in the invoice amount. And they'll go in. Also, when I looked it up, I didn't look it up by the serial number.
+
+I looked it up by the vendor invoice because then they'll replace it. As I said before, they'll replace that number from the Oracle lease module with the actual invoice number from the vendor. And if there's multiple from the vendor, it'll have that number A, BCDEFG. Okay. So question is this, is there a report using which you would know that in this case, 1,800 is the differential amount?
+
+So is there a custom report of any sort? Yes. I would like to see the report that you run. Because the lease reconciliation report doesn't have coding on it. So you must have to dump, like There's another report that does have I used the lease invoice reconciliation.
+
+It's got the coding. That's the one. Thank you, Shannon. It's got the coding on it. Ours I'm just looking at ours.
+
+It doesn't have the coding on it. It never has. Mhmm. I there's one with coating on it because I've filtered on it. Because that would literally solve that entire problem, Misty.
+
+I'm like, what? Like Yeah. Excuse me. This whole time, I've been like, oh, I'm like No. That report is a dump of everything.
+
+So you should have me. You need I don't understand. Just pull some out of it short. Yeah. So the report shows all of the coding per line for invoices.
+
+Yeah. Also, accounting date, that's the coding. Yeah. So, yeah, I think you have your too. I understand that the lease invoice reconciliation report.
+
+Yeah. I understand that. That was the new one that you guys created. We've always ever used that lease reconciliation report, Vicky. That's like ultimately what we need to balance.
+
+Right? There are two reports when it comes to the right Yeah. That's what I was like. We're talking about two different ones, I think. Yeah.
+
+You guys are talking about two different ones. One is a supplementary. Two. I was like, it's almost like yeah. It's to complement the lease rec report.
+
+That's why this one is called lease invoice rec. Right? If you look at the title of this report that is being shown here, it's the invoice relating to the leases. Totally. And we use that.
+
+Absolutely. We use that as backup. But I thought ultimately, at the end of the day, the lease reconciliation report, we need to get those balances to zero. In which case, if you code something if you pay something with the eight one eight expense code with that heading tagged to the lease number, you will pull it in. But I think that might be just a Yeah.
+
+We don't It could be a further discussion. We could come back to it. We don't use the paid the where it says total payments. We don't really use that column in our reconciliation because it pulls in everything. So we we don't use that column to balance.
+
+I think where I struggle with too, maybe this is a different conversation, Vicky. Like, when we did our went through our internal audit, like, they pulled up this lease reconciliation report, and they didn't even use any of our adjustments. They used that total difference at the bottom, and that was one of our, major, what do you call it, discrepancies, like so I'm was confused. I thought this report was like Oh, no. That would be really amazing if that happened.
+
+That would be really great if that if if we could do what you gonna get there, and this is what we're trying to get to. I don't know how long this is gonna take. I chose a short don't you have a file that's saved in your downloads from the previous time you run it? See, I don't I only run it if if I can't balance in my normal session. That's the only time I have to run it.
+
+But for me, the ones that I reconcile, the they balance. So I don't have an issue where I have to run this every period. It shouldn't be too long. I've done this before. It should be okay.
+
+But I could pop over. I just have a lease rec report open while that's running. Do you want me to share my screen? Sure. Go for it.
+
+Yeah. So when you run this report, okay, for the invoice that we saw now, right, 5,500. So what is expected? Are we expected to get a value of $3.07 $5.00? And basis that you will say that thousand 800 is additional?
+
+We wouldn't show this report. You should have both lines. Yeah. It'll have the one that Juanita was running will have the two lines. It'll show the $2.05 7 that went to the liability, and then I'll have another line with the $8.01 8 that went to expense.
+
+And it'll be if you add them together, well, there'll be a line on there, I think, for AP. But if you add them together, that's the total invoice amount. It just splits it between where it was coded. Mhmm. Okay.
+
+But in order to get to that 1,800, you will have to go you will have to look at the individual invoices and compare it with what is coming from the lease module and then add any of those differential amounts Yes. Which is a manual exercise currently. And how many such examples are there roughly in a month volume wise? I would probably say 75% are are like this one. And then there's the other ones that are, a base payment and don't change.
+
+Maybe a little bit less than that because really just our big our big loaders are have set payments that don't change. The rest of them, every contract they're negotiating now is based on a base a minimum payment and then hours on it. So most of them are like like what we just saw. Okay. Okay.
+
+Got it. I want I wanna take one minute, Sadish, whenever because we have only two more minutes. Oh, yeah. Sure. Team, I have booked one more meeting on twenty eighth, and everyone has accepted.
+
+Thank you. But I know month end is coming. So it is not, like, continuous. We are planning to have the sessions. Does anybody see any challenge with any of these dates?
+
+I know there is a long weekend on August 4 as well. Sorry. What dates, Billy, were you saying? July 30. I have highlighted here.
+
+Thirtieth, first, fifth. In between, there is voids, and all these sessions are not more than two hours except with the exception of August 18, which is three hours, which is, like, looking at the initial design in the lease accounting module. The fifth is in their testing, Oracle testing? Yeah. We have the upgrade testing.
+
+So we can't have it on the fifth. Right? So can I move it to sixth? Sixth is fine? Sixth is what?
+
+Yeah. The sixth is fine for us. Well Well, it does it doesn't really matter because it's the whole week. Right? Yeah.
+
+I so whenever the The fourth to eighth is when we would do the upgrade testing. But I think some of these are, like data migration. I don't think all of us needs to be part of it. Possibly, like, we could come up with a plan and then discuss it with the team, of this is how we need to approach. Because I think CalFas also need to look at what we actually have in place in fixed assets currently.
+
+Right? Yep. And then we can go from there. I don't know. That's my thought.
+
+For now, I have '28. Right? So I will book one for thirtieth. On twenty eighth, we will decide what the remaining schedule is going to be. Is that okay?
+
+Yes. Okay. Alright. So let me book on the thirtieth, and then we'll take it off from there. Can I just ask about, The US's lease entries?
+
+If you're consolidating and combining additional costs, then when you look at the manage invoice group, you can't you can't see your lease payments because every month, the dollar amount changes. Right? I think what they look at is just specifically the clearing account. Mhmm. Right?
+
+Right. Yeah. So then AP would never know. AP AP can't check at all. They have the open invoices that are out there.
+
+They go in and change those invoice. So any of the ones that are generated and open, that's how they they keep up with it. Yes. And that's how they know what's missing and what hasn't come in or what we owe for. K.
+
+K. K. Thank you. And that report for me, Vicki, is timing out. Of course, it is.
+
+I can forward something to you, Salish on that report if you need to see it. Yes. Yes. I would like to see that report. Yep.
+
+For sure. And I'll send you the, our journal entries as well when we create an ROU slash lease because then that will give you a better understanding of how we code things as well because we do use the activity code to determine whether it's a disposal or whether it's an interest and so on and so forth. K? Sure. Yeah.
+
+So I think next call, let us continue with this discussion. So I think process told I mean, we got a good idea is what I would say, but let us continue this. And, I have a few ideas in mind. Maybe next session or the session after that, I can share that across me. Okay.
+
+K. Would you like any other sample? Sorry, Opili. Because I it seems like, Juanita has a pretty good, supporting document. She's really good at that to send over for your review.
+
+If Misty, if you even have something on your side or Sam, it would be also good to provide that just so that Tel Fest has a better idea of what the differences are. Even, like, we didn't realize the lease invoices that are coming from vendors are actually different as well. Right? That might help you better. Any documentation, send it to me so that I can put it on SharePoint properly, have the documents controlled.
+
+So send it to me. I will take the and everybody has got access to SharePoint. Right? Now, today morning, I have done all of that. Correct?
+
+I still, got that error which I messaged hopefully. I have nothing after that if you have changed it. For for your team, I'm working internally for Okay. For for the reporting. Any documents, guys, just put it here so that, we are very clear, then let me know.
+
+Everything has to go on SharePoint so that we are not tracking emails, because emails are going to be challenging, and I do not want that. So that is why on this call itself, I wanna take additional another thirty seconds. So everybody should have access to this particular channel now. Right? So if any of you don't have access, tell me.
+
+I will provide you with the access. Anything that you are putting reference, put it in this too. Right? So then I can tell CalPERS to pick it up from there. K.
+
+So this is where all the reference documents should go in. If you wanted to create folders like, Canada separately, US separately, those are fine. But put all documentations here. Thank you. I will resolve your, issue, Shailesh.
+
+I'm working on it. It's a firewall it's a firewall issue. I need to go through security approval before anything can be granted. Teams is working. SharePoint is not working for you guys.
+
+Yeah. Okay. Thanks everyone for joining us. Thank you. Thanks a lot.
+
+Thank you. Thank you. Bye, hon. Bye.
